@@ -1,0 +1,719 @@
+[
+  {
+    "id": "fc-bayern-munchen",
+    "name": "FC Bayern Munchen",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 96,
+    "sources": {
+      "Germany": 7,
+      "France": 5,
+      "England": 4,
+      "Colombia": 3,
+      "Croatia": 3,
+      "Portugal": 3,
+      "Netherlands": 2,
+      "Canada": 2,
+      "South Korea": 2
+    },
+    "feeders": [
+      "Tottenham Hotspur",
+      "Chelsea",
+      "Manchester United",
+      "Real Madrid",
+      "VfB Stuttgart",
+      "Red Bull Salzburg",
+      "RB Leipzig",
+      "AS Monaco",
+      "Lyon",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Borussia Dortmund"
+    ],
+    "style": {
+      "youth": 8,
+      "veteran": 5,
+      "physical": 6,
+      "technical": 9,
+      "pace": 7
+    },
+    "ageIdeal": [
+      19,
+      31
+    ],
+    "notes": "Dominates Germany. Takes the best from the Bundesliga plus big-name outside buys. Wants technical, high-intensity players."
+  },
+  {
+    "id": "borussia-dortmund",
+    "name": "Borussia Dortmund",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 85,
+    "sources": {
+      "Germany": 6,
+      "England": 4,
+      "Austria": 3,
+      "Netherlands": 3,
+      "Norway": 2,
+      "Turkey": 2,
+      "Ivory Coast": 2,
+      "Belgium": 2
+    },
+    "feeders": [
+      "Red Bull Salzburg",
+      "Mainz",
+      "Hoffenheim",
+      "Brighton",
+      "Gent",
+      "Union Saint-Gilloise",
+      "Bayer Leverkusen",
+      "Ajax"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "FC Bayern Munchen",
+      "Schalke 04"
+    ],
+    "style": {
+      "youth": 9,
+      "veteran": 2,
+      "physical": 6,
+      "technical": 7,
+      "pace": 9
+    },
+    "ageIdeal": [
+      18,
+      26
+    ],
+    "notes": "Develop-and-sell model. Fast transitions and young attackers. Unlikely to sign players much over 28."
+  },
+  {
+    "id": "bayer-04-leverkusen",
+    "name": "Bayer 04 Leverkusen",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 86,
+    "sources": {
+      "Germany": 5,
+      "Spain": 4,
+      "Argentina": 3,
+      "Switzerland": 3,
+      "Netherlands": 4,
+      "Ecuador": 3,
+      "Czech Republic": 3,
+      "Nigeria": 3,
+      "Mexico": 2
+    },
+    "feeders": [
+      "Real Betis",
+      "Athletic Club",
+      "Bologna",
+      "Girona",
+      "Ajax",
+      "Feyenoord",
+      "Hoffenheim",
+      "Sparta Prague"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "FC Koln"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 9,
+      "pace": 8
+    },
+    "ageIdeal": [
+      19,
+      28
+    ],
+    "notes": "Possession-based 3-4-2-1 flavour with technical midfielders. Fits this system closely."
+  },
+  {
+    "id": "rb-leipzig",
+    "name": "RB Leipzig",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 82,
+    "sources": {
+      "Germany": 4,
+      "Austria": 5,
+      "France": 4,
+      "Hungary": 4,
+      "Slovenia": 3,
+      "Netherlands": 3,
+      "Croatia": 3,
+      "Belgium": 3,
+      "Sweden": 2
+    },
+    "feeders": [
+      "Red Bull Salzburg",
+      "Red Bull Bragantino",
+      "Rapid Wien",
+      "Lens",
+      "Lille",
+      "Ajax",
+      "Atalanta"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Borussia Dortmund",
+      "FC Union Berlin"
+    ],
+    "style": {
+      "youth": 10,
+      "veteran": 1,
+      "physical": 6,
+      "technical": 7,
+      "pace": 10
+    },
+    "ageIdeal": [
+      18,
+      25
+    ],
+    "notes": "Young, fast, vertical players from the Red Bull network. Almost never signs players over 27."
+  },
+  {
+    "id": "vfb-stuttgart",
+    "name": "VfB Stuttgart",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 74,
+    "sources": {
+      "Germany": 7,
+      "Switzerland": 3,
+      "Austria": 3,
+      "France": 3,
+      "Japan": 2,
+      "Brazil": 2,
+      "Spain": 2
+    },
+    "feeders": [
+      "Hoffenheim",
+      "Union Berlin",
+      "Mainz",
+      "Eintracht Frankfurt",
+      "Bayer Leverkusen",
+      "Young Boys"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Karlsruher SC"
+    ],
+    "style": {
+      "youth": 8,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 7,
+      "pace": 7
+    },
+    "ageIdeal": [
+      19,
+      28
+    ],
+    "notes": "Strong youth system and quick, direct football. Buys Bundesliga players and Swiss/Austrian talents."
+  },
+  {
+    "id": "eintracht-frankfurt",
+    "name": "Eintracht Frankfurt",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 72,
+    "sources": {
+      "Germany": 5,
+      "Japan": 4,
+      "France": 4,
+      "Egypt": 2,
+      "Denmark": 2,
+      "Switzerland": 2,
+      "Brazil": 2,
+      "Spain": 2
+    },
+    "feeders": [
+      "Benfica",
+      "Lyon",
+      "Union Saint-Gilloise",
+      "Hoffenheim",
+      "Mainz",
+      "Sevilla",
+      "Lille"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "FSV Mainz 05"
+    ],
+    "style": {
+      "youth": 9,
+      "veteran": 2,
+      "physical": 6,
+      "technical": 7,
+      "pace": 8
+    },
+    "ageIdeal": [
+      19,
+      26
+    ],
+    "notes": "Buys cheap, sells high. Strong Japanese and French channels. Fast, athletic attackers."
+  },
+  {
+    "id": "sc-freiburg",
+    "name": "SC Freiburg",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 62,
+    "sources": {
+      "Germany": 6,
+      "Austria": 3,
+      "Switzerland": 3,
+      "Hungary": 3,
+      "Japan": 3,
+      "Italy": 2,
+      "Georgia": 2
+    },
+    "feeders": [
+      "Sparta Prague",
+      "Austria Wien",
+      "FC Basel",
+      "Fortuna Dusseldorf",
+      "Mainz",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 6,
+      "pace": 6
+    },
+    "ageIdeal": [
+      19,
+      28
+    ],
+    "notes": "Patient, structured club with strong youth development. Austrian, Swiss and Hungarian recruits."
+  },
+  {
+    "id": "tsg-hoffenheim",
+    "name": "TSG Hoffenheim",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 60,
+    "sources": {
+      "Germany": 5,
+      "Austria": 3,
+      "Croatia": 3,
+      "Czech Republic": 3,
+      "Denmark": 2,
+      "Hungary": 2,
+      "Switzerland": 2
+    },
+    "feeders": [
+      "Red Bull Salzburg",
+      "Sparta Prague",
+      "Rapid Wien",
+      "Lyon",
+      "Lille",
+      "Austria Wien"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [],
+    "style": {
+      "youth": 8,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 6,
+      "pace": 7
+    },
+    "ageIdeal": [
+      19,
+      27
+    ],
+    "notes": "Young, pressing-oriented project. Central European players in the 20 to 26 range."
+  },
+  {
+    "id": "borussia-monchengladbach",
+    "name": "Borussia Monchengladbach",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 62,
+    "sources": {
+      "Germany": 6,
+      "Switzerland": 3,
+      "France": 3,
+      "Austria": 2,
+      "Denmark": 2,
+      "Cameroon": 2,
+      "Slovakia": 1
+    },
+    "feeders": [
+      "FC Basel",
+      "FC Zurich",
+      "Lyon",
+      "Lille",
+      "Hannover 96",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "FC Koln"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 4,
+      "physical": 6,
+      "technical": 6,
+      "pace": 7
+    },
+    "ageIdeal": [
+      19,
+      29
+    ],
+    "notes": "Fohlenelf tradition of young talent and attacking play. Swiss pipeline."
+  },
+  {
+    "id": "fsv-mainz-05",
+    "name": "FSV Mainz 05",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 54,
+    "sources": {
+      "Germany": 5,
+      "Japan": 3,
+      "Switzerland": 2,
+      "Austria": 2,
+      "Netherlands": 2,
+      "Denmark": 1
+    },
+    "feeders": [
+      "Hamburger SV",
+      "Eintracht Frankfurt",
+      "Hoffenheim",
+      "Lyon",
+      "Red Bull Salzburg",
+      "Leipzig"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Eintracht Frankfurt"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 7,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      19,
+      27
+    ],
+    "notes": "Gritty, pressing-heavy and full of reclamation projects."
+  },
+  {
+    "id": "fc-augsburg",
+    "name": "FC Augsburg",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 50,
+    "sources": {
+      "Germany": 5,
+      "Switzerland": 3,
+      "Austria": 3,
+      "Greece": 2,
+      "Hungary": 2,
+      "Denmark": 1
+    },
+    "feeders": [
+      "FC Basel",
+      "FC Zurich",
+      "Young Boys",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "FC Bayern Munchen"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 6,
+      "physical": 8,
+      "technical": 4,
+      "pace": 5
+    },
+    "ageIdeal": [
+      21,
+      31
+    ],
+    "notes": "Physical, defensive and counter-based. Likes strong, aerially capable players."
+  },
+  {
+    "id": "sv-werder-bremen",
+    "name": "SV Werder Bremen",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 56,
+    "sources": {
+      "Germany": 6,
+      "Austria": 3,
+      "Norway": 2,
+      "Japan": 2,
+      "Belgium": 2,
+      "Denmark": 1
+    },
+    "feeders": [
+      "Hannover 96",
+      "Hamburger SV",
+      "Hoffenheim",
+      "Mainz",
+      "Union Saint-Gilloise"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Hamburger SV"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 4,
+      "physical": 6,
+      "technical": 6,
+      "pace": 6
+    },
+    "ageIdeal": [
+      19,
+      29
+    ],
+    "notes": "Traditional club with a northern German identity. Hardworking players and some good young ones."
+  },
+  {
+    "id": "fc-union-berlin",
+    "name": "FC Union Berlin",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 56,
+    "sources": {
+      "Germany": 5,
+      "Austria": 3,
+      "Netherlands": 2,
+      "Denmark": 2,
+      "Hungary": 1,
+      "Croatia": 1
+    },
+    "feeders": [
+      "Hannover 96",
+      "Hoffenheim",
+      "Mainz",
+      "Leipzig",
+      "Rapid Wien"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Hertha BSC"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 6,
+      "physical": 9,
+      "technical": 4,
+      "pace": 5
+    },
+    "ageIdeal": [
+      22,
+      32
+    ],
+    "notes": "Compact, physical, set-piece heavy. Prefers experienced, committed players over flair."
+  },
+  {
+    "id": "1-fc-koln",
+    "name": "1. FC Koln",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 54,
+    "sources": {
+      "Germany": 6,
+      "Austria": 3,
+      "Switzerland": 3,
+      "Croatia": 2,
+      "Japan": 1
+    },
+    "feeders": [
+      "Hannover 96",
+      "FC Basel",
+      "Young Boys",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Bayer 04 Leverkusen",
+      "Borussia Monchengladbach"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 7,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Passionate fan base with a Rhine identity. Mix of German players and Swiss/Austrian recruits."
+  },
+  {
+    "id": "hamburger-sv",
+    "name": "Hamburger SV",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 56,
+    "sources": {
+      "Germany": 6,
+      "Netherlands": 3,
+      "Switzerland": 3,
+      "Denmark": 2,
+      "Austria": 2
+    },
+    "feeders": [
+      "Eintracht Frankfurt",
+      "Hannover 96",
+      "FC Basel",
+      "Young Boys",
+      "Hoffenheim"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "SV Werder Bremen"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 6,
+      "technical": 6,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Back in the Bundesliga with historic prestige. Wants possession and a few leaders."
+  },
+  {
+    "id": "fc-schalke-04",
+    "name": "FC Schalke 04",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 56,
+    "sources": {
+      "Germany": 6,
+      "Turkey": 3,
+      "Netherlands": 2,
+      "Belgium": 2,
+      "Poland": 1
+    },
+    "feeders": [
+      "Hannover 96",
+      "Hertha BSC",
+      "Fortuna Dusseldorf",
+      "Borussia Dortmund"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Borussia Dortmund"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 7,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      31
+    ],
+    "notes": "Ruhr-area identity. Gritty players with local ties; prefers German-speaking squads."
+  },
+  {
+    "id": "sc-paderborn-07",
+    "name": "SC Paderborn 07",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 40,
+    "sources": {
+      "Germany": 7,
+      "Austria": 2,
+      "Switzerland": 2
+    },
+    "feeders": [
+      "Hannover 96",
+      "Fortuna Dusseldorf",
+      "2. Bundesliga clubs"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [],
+    "style": {
+      "youth": 5,
+      "veteran": 6,
+      "physical": 8,
+      "technical": 4,
+      "pace": 5
+    },
+    "ageIdeal": [
+      21,
+      31
+    ],
+    "notes": "Promoted via the play-off. Workmanlike team that buys from the German second tier."
+  },
+  {
+    "id": "sv-elversberg",
+    "name": "SV Elversberg",
+    "league": "Bundesliga",
+    "country": "Germany",
+    "prestige": 36,
+    "sources": {
+      "Germany": 7,
+      "Austria": 2,
+      "Switzerland": 1
+    },
+    "feeders": [
+      "2. Bundesliga clubs",
+      "3. Liga clubs"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      19,
+      28
+    ],
+    "notes": "First Bundesliga season. Recruits through development and the German lower tiers."
+  }
+]

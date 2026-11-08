@@ -1,0 +1,8 @@
+{
+  "files": [
+    "premier-league.json",
+    "bundesliga.json",
+    "serie-a.json",
+    "championship.json"
+  ]
+}

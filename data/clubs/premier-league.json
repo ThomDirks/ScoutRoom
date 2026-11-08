@@ -1,0 +1,881 @@
+[
+  {
+    "id": "manchester-city",
+    "name": "Manchester City",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 94,
+    "sources": {
+      "England": 6,
+      "Spain": 6,
+      "Portugal": 5,
+      "Brazil": 4,
+      "Belgium": 3,
+      "Netherlands": 3,
+      "Norway": 3,
+      "Germany": 3,
+      "France": 3,
+      "Argentina": 3,
+      "Switzerland": 2,
+      "Uzbekistan": 2
+    },
+    "feeders": [
+      "Girona",
+      "Brighton",
+      "Sporting CP",
+      "Barcelona",
+      "Borussia Dortmund",
+      "Atletico Madrid",
+      "Real Sociedad",
+      "Bournemouth"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Manchester United",
+      "Liverpool"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 3,
+      "physical": 5,
+      "technical": 10,
+      "pace": 7
+    },
+    "ageIdeal": [
+      20,
+      31
+    ],
+    "notes": "Possession and positional play at the top level. Group network (Girona, NYCFC, Melbourne City) feeds in young talent. Buys technical, tactically fluent players."
+  },
+  {
+    "id": "arsenal",
+    "name": "Arsenal",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 93,
+    "sources": {
+      "England": 7,
+      "France": 5,
+      "Brazil": 6,
+      "Spain": 5,
+      "Norway": 3,
+      "Netherlands": 3,
+      "Belgium": 2,
+      "Italy": 3,
+      "Sweden": 3,
+      "Ukraine": 2,
+      "Germany": 2
+    },
+    "feeders": [
+      "Brighton",
+      "Real Sociedad",
+      "Sporting CP",
+      "Ajax",
+      "Bologna",
+      "Lille",
+      "Bournemouth",
+      "Villarreal"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Tottenham Hotspur",
+      "Chelsea"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 3,
+      "physical": 7,
+      "technical": 8,
+      "pace": 7
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Structured pressing and set-piece detail. Builds around athletic, press-resistant players in their 20s. Recent habit of buying from mid-table Premier League and Spanish clubs."
+  },
+  {
+    "id": "liverpool",
+    "name": "Liverpool",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 93,
+    "sources": {
+      "England": 6,
+      "Netherlands": 5,
+      "Germany": 4,
+      "Brazil": 4,
+      "Hungary": 3,
+      "Uruguay": 3,
+      "Colombia": 3,
+      "Senegal": 3,
+      "Portugal": 3,
+      "France": 3,
+      "Japan": 2,
+      "Egypt": 2
+    },
+    "feeders": [
+      "RB Leipzig",
+      "Red Bull Salzburg",
+      "Hoffenheim",
+      "Southampton",
+      "Real Sociedad",
+      "Bayer Leverkusen",
+      "Bournemouth",
+      "Eintracht Frankfurt",
+      "Fluminense"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Manchester United",
+      "Everton",
+      "Manchester City"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 3,
+      "physical": 7,
+      "technical": 7,
+      "pace": 8
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Intense, high-energy football. Data-led recruitment from the Bundesliga, Benfica-style leagues and the Premier League. Likes relentless, vertical players."
+  },
+  {
+    "id": "chelsea",
+    "name": "Chelsea",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 88,
+    "sources": {
+      "England": 7,
+      "France": 6,
+      "Brazil": 5,
+      "Argentina": 4,
+      "Portugal": 4,
+      "Spain": 3,
+      "Ecuador": 3,
+      "Belgium": 3,
+      "Senegal": 3,
+      "Netherlands": 2,
+      "Colombia": 2
+    },
+    "feeders": [
+      "Strasbourg",
+      "Brighton",
+      "Benfica",
+      "Palmeiras",
+      "Flamengo",
+      "Independiente del Valle",
+      "Lens",
+      "Fluminense",
+      "Sporting CP"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Arsenal",
+      "Tottenham Hotspur",
+      "Liverpool"
+    ],
+    "style": {
+      "youth": 10,
+      "veteran": 1,
+      "physical": 6,
+      "technical": 7,
+      "pace": 8
+    },
+    "ageIdeal": [
+      18,
+      26
+    ],
+    "notes": "Multi-club model buying high-potential youth on long contracts. Strong Strasbourg and South American pipelines. Rarely buys veterans."
+  },
+  {
+    "id": "manchester-united",
+    "name": "Manchester United",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 86,
+    "sources": {
+      "England": 7,
+      "Portugal": 5,
+      "Netherlands": 4,
+      "Brazil": 4,
+      "Denmark": 3,
+      "Argentina": 3,
+      "France": 3,
+      "Germany": 2,
+      "Belgium": 2,
+      "Slovenia": 2,
+      "Cameroon": 2,
+      "Sweden": 2
+    },
+    "feeders": [
+      "Ajax",
+      "Sporting CP",
+      "Brentford",
+      "Bologna",
+      "Atalanta",
+      "Bournemouth",
+      "Borussia Dortmund",
+      "Bayern Munich"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Liverpool",
+      "Manchester City",
+      "Leeds United"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 4,
+      "physical": 6,
+      "technical": 6,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Big name, big pull, big squad churn. Recruits from the Premier League, Ajax and Portuguese clubs. Likes forwards with dribbling and a goal threat."
+  },
+  {
+    "id": "tottenham-hotspur",
+    "name": "Tottenham Hotspur",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 82,
+    "sources": {
+      "England": 6,
+      "Argentina": 4,
+      "South Korea": 3,
+      "Brazil": 3,
+      "Spain": 3,
+      "Netherlands": 3,
+      "France": 3,
+      "Ghana": 2,
+      "Italy": 2,
+      "Czech Republic": 2,
+      "Ecuador": 2,
+      "Denmark": 2,
+      "Croatia": 2
+    },
+    "feeders": [
+      "Ajax",
+      "Villarreal",
+      "Atalanta",
+      "Fiorentina",
+      "Southampton",
+      "Brentford",
+      "Leeds United",
+      "Lyon",
+      "Real Betis"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Arsenal",
+      "Chelsea"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 6,
+      "technical": 7,
+      "pace": 9
+    },
+    "ageIdeal": [
+      19,
+      29
+    ],
+    "notes": "High defensive line, pace in behind, quick transitions. Pays for athletic wide players and mobile defenders."
+  },
+  {
+    "id": "newcastle-united",
+    "name": "Newcastle United",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 80,
+    "sources": {
+      "England": 6,
+      "Brazil": 5,
+      "Sweden": 3,
+      "Germany": 3,
+      "Italy": 3,
+      "France": 3,
+      "Netherlands": 2,
+      "Switzerland": 2,
+      "Colombia": 2,
+      "Spain": 2
+    },
+    "feeders": [
+      "Real Sociedad",
+      "Fiorentina",
+      "Brighton",
+      "Atletico Madrid",
+      "Bournemouth",
+      "Lille",
+      "AC Milan"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Sunderland"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 5,
+      "physical": 8,
+      "technical": 6,
+      "pace": 6
+    },
+    "ageIdeal": [
+      21,
+      31
+    ],
+    "notes": "Physical, aggressive pressing with strong wide threats. Saudi-backed ambition. Buys proven Premier League and Serie A players."
+  },
+  {
+    "id": "aston-villa",
+    "name": "Aston Villa",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 78,
+    "sources": {
+      "England": 6,
+      "Argentina": 5,
+      "France": 4,
+      "Colombia": 4,
+      "Spain": 4,
+      "Netherlands": 3,
+      "Belgium": 3,
+      "Brazil": 3,
+      "Poland": 2,
+      "Ireland": 2,
+      "Portugal": 2
+    },
+    "feeders": [
+      "Villarreal",
+      "Real Sociedad",
+      "Sevilla",
+      "Girona",
+      "Real Betis",
+      "Lyon",
+      "Boca Juniors",
+      "Ajax"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Tottenham Hotspur"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 6,
+      "technical": 7,
+      "pace": 6
+    },
+    "ageIdeal": [
+      21,
+      30
+    ],
+    "notes": "Emery-style high line and compact block. Strong Spanish and Argentine channels. Likes intelligent defenders and technical midfielders."
+  },
+  {
+    "id": "brighton-hove-albion",
+    "name": "Brighton & Hove Albion",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 70,
+    "sources": {
+      "England": 4,
+      "Netherlands": 4,
+      "Belgium": 4,
+      "Japan": 4,
+      "Paraguay": 3,
+      "Ecuador": 3,
+      "Argentina": 3,
+      "Brazil": 3,
+      "France": 3,
+      "Germany": 3,
+      "Spain": 2
+    },
+    "feeders": [
+      "Union Saint-Gilloise",
+      "Club Brugge",
+      "Ajax",
+      "Feyenoord",
+      "Gent",
+      "Anderlecht",
+      "Utrecht",
+      "Kawasaki Frontale",
+      "Sint-Truiden"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Crystal Palace"
+    ],
+    "style": {
+      "youth": 10,
+      "veteran": 0,
+      "physical": 5,
+      "technical": 9,
+      "pace": 7
+    },
+    "ageIdeal": [
+      18,
+      26
+    ],
+    "notes": "Data-driven recruitment of young, technical players. Strong Belgian, Dutch and Japanese pipelines. Sells on at a profit."
+  },
+  {
+    "id": "crystal-palace",
+    "name": "Crystal Palace",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 66,
+    "sources": {
+      "England": 6,
+      "France": 3,
+      "Senegal": 3,
+      "Ghana": 3,
+      "Japan": 2,
+      "Colombia": 2,
+      "Slovakia": 1,
+      "Jamaica": 2
+    },
+    "feeders": [
+      "Lyon",
+      "Lens",
+      "Reims",
+      "Southampton",
+      "Eintracht Frankfurt",
+      "Lorient"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Brighton & Hove Albion"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 7,
+      "technical": 5,
+      "pace": 8
+    },
+    "ageIdeal": [
+      21,
+      30
+    ],
+    "notes": "Counter-attacking, athletic wide play. Grabs fast attackers and aggressive midfielders."
+  },
+  {
+    "id": "fulham",
+    "name": "Fulham",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 6,
+      "Portugal": 3,
+      "USA": 3,
+      "Nigeria": 3,
+      "Brazil": 3,
+      "Spain": 3,
+      "Denmark": 2,
+      "Norway": 2
+    },
+    "feeders": [
+      "Benfica",
+      "Sporting CP",
+      "Real Betis",
+      "Brighton",
+      "Ajax"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Chelsea"
+    ],
+    "style": {
+      "youth": 4,
+      "veteran": 7,
+      "physical": 5,
+      "technical": 6,
+      "pace": 5
+    },
+    "ageIdeal": [
+      23,
+      32
+    ],
+    "notes": "Mature, technical squad. Buys experienced Premier League players and a few Portuguese options."
+  },
+  {
+    "id": "brentford",
+    "name": "Brentford",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 5,
+      "Denmark": 5,
+      "Norway": 3,
+      "Germany": 3,
+      "Netherlands": 3,
+      "Brazil": 3,
+      "Cameroon": 3,
+      "Ghana": 2
+    },
+    "feeders": [
+      "Midtjylland",
+      "FC Copenhagen",
+      "Brondby",
+      "Lorient",
+      "Wolfsburg",
+      "Ostersund",
+      "Bournemouth"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Fulham"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 4,
+      "physical": 6,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      21,
+      29
+    ],
+    "notes": "Moneyball approach with set-piece strength. Scandinavian and lower-league English recruitment. Strong at replacing players it sells."
+  },
+  {
+    "id": "afc-bournemouth",
+    "name": "AFC Bournemouth",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 5,
+      "Spain": 4,
+      "Brazil": 3,
+      "Hungary": 3,
+      "Netherlands": 3,
+      "Ghana": 3,
+      "Ukraine": 2,
+      "Colombia": 2,
+      "Portugal": 2
+    },
+    "feeders": [
+      "Lorient",
+      "AZ Alkmaar",
+      "Dynamo Kyiv",
+      "Dinamo Zagreb",
+      "Porto",
+      "Valencia",
+      "Girona",
+      "Real Sociedad"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Southampton"
+    ],
+    "style": {
+      "youth": 7,
+      "veteran": 3,
+      "physical": 7,
+      "technical": 6,
+      "pace": 8
+    },
+    "ageIdeal": [
+      20,
+      28
+    ],
+    "notes": "Aggressive, fast-pressing identity. Likes young athletes with upside. Mixes bargains from continental Europe with Championship graduates."
+  },
+  {
+    "id": "everton",
+    "name": "Everton",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 7,
+      "Ireland": 3,
+      "Senegal": 3,
+      "Morocco": 2,
+      "Brazil": 2,
+      "France": 2,
+      "Belgium": 2,
+      "Nigeria": 2
+    },
+    "feeders": [
+      "Burnley",
+      "Sheffield United",
+      "Brighton",
+      "Southampton",
+      "Leicester City"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Liverpool"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 5,
+      "physical": 8,
+      "technical": 4,
+      "pace": 5
+    },
+    "ageIdeal": [
+      21,
+      31
+    ],
+    "notes": "Physical, direct, set-piece heavy. Buys proven English players and loan options."
+  },
+  {
+    "id": "nottingham-forest",
+    "name": "Nottingham Forest",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 4,
+      "Brazil": 4,
+      "Portugal": 5,
+      "Greece": 3,
+      "Sweden": 2,
+      "Spain": 3,
+      "Ghana": 2,
+      "Nigeria": 2
+    },
+    "feeders": [
+      "Olympiacos",
+      "Sporting CP",
+      "Benfica",
+      "Porto",
+      "Braga",
+      "Fluminense",
+      "Ajax"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Derby County"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 5,
+      "physical": 7,
+      "technical": 5,
+      "pace": 7
+    },
+    "ageIdeal": [
+      21,
+      30
+    ],
+    "notes": "Counter-attacking with a Portuguese and Greek recruitment network. Likes quick wide players and strong midfield runners."
+  },
+  {
+    "id": "leeds-united",
+    "name": "Leeds United",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 62,
+    "sources": {
+      "England": 6,
+      "Germany": 4,
+      "USA": 3,
+      "Netherlands": 3,
+      "Switzerland": 3,
+      "Brazil": 2,
+      "France": 2
+    },
+    "feeders": [
+      "RB Leipzig",
+      "Borussia Monchengladbach",
+      "FC Basel",
+      "Eintracht Frankfurt",
+      "Ajax",
+      "Brighton"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Manchester United"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 4,
+      "physical": 8,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      29
+    ],
+    "notes": "High-intensity, man-oriented pressing heritage. Recruits from the Bundesliga and Championship."
+  },
+  {
+    "id": "sunderland",
+    "name": "Sunderland",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 56,
+    "sources": {
+      "England": 6,
+      "France": 5,
+      "Belgium": 3,
+      "Netherlands": 3,
+      "Switzerland": 2,
+      "Spain": 2,
+      "Ivory Coast": 2
+    },
+    "feeders": [
+      "Strasbourg",
+      "Union Saint-Gilloise",
+      "Club Brugge",
+      "Ajax",
+      "Rennes",
+      "Lorient",
+      "Lyon"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Newcastle United"
+    ],
+    "style": {
+      "youth": 9,
+      "veteran": 2,
+      "physical": 6,
+      "technical": 6,
+      "pace": 7
+    },
+    "ageIdeal": [
+      19,
+      26
+    ],
+    "notes": "Young, high-potential recruitment led by a data approach, heavy on French and Belgian clubs."
+  },
+  {
+    "id": "coventry-city",
+    "name": "Coventry City",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 52,
+    "sources": {
+      "England": 7,
+      "Ireland": 2,
+      "Scotland": 2,
+      "Jamaica": 2,
+      "Netherlands": 2
+    },
+    "feeders": [
+      "Championship clubs"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Leicester City"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 6,
+      "physical": 6,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      31
+    ],
+    "notes": "Promoted champions. Pragmatic recruitment from the Championship and English lower leagues."
+  },
+  {
+    "id": "ipswich-town",
+    "name": "Ipswich Town",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 50,
+    "sources": {
+      "England": 7,
+      "Scotland": 2,
+      "Ireland": 2,
+      "Netherlands": 1
+    },
+    "feeders": [
+      "Championship clubs"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Norwich City"
+    ],
+    "style": {
+      "youth": 6,
+      "veteran": 5,
+      "physical": 6,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Back up after one season out. Prefers English-based players with Championship experience."
+  },
+  {
+    "id": "hull-city",
+    "name": "Hull City",
+    "league": "Premier League",
+    "country": "England",
+    "prestige": 46,
+    "sources": {
+      "England": 7,
+      "Turkey": 3,
+      "Ghana": 1
+    },
+    "feeders": [
+      "Fenerbahce",
+      "Galatasaray",
+      "Besiktas",
+      "Championship clubs"
+    ],
+    "feederLeagues": [],
+    "ties": [],
+    "rivals": [
+      "Leeds United"
+    ],
+    "style": {
+      "youth": 5,
+      "veteran": 6,
+      "physical": 6,
+      "technical": 5,
+      "pace": 6
+    },
+    "ageIdeal": [
+      20,
+      31
+    ],
+    "notes": "Promoted via the play-offs. Turkish-owned, with a lean towards Turkish links and English lower-league players."
+  }
+]

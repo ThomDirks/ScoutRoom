@@ -1,0 +1,46 @@
+[
+  {
+    "id": "wolverhampton-wanderers",
+    "name": "Wolverhampton Wanderers",
+    "league": "Championship",
+    "country": "England",
+    "prestige": 58,
+    "sources": {
+      "Portugal": 10,
+      "England": 4,
+      "Spain": 4,
+      "Brazil": 3,
+      "Mexico": 3,
+      "South Korea": 2,
+      "Norway": 2
+    },
+    "feeders": [
+      "Benfica",
+      "Sporting CP",
+      "FC Porto",
+      "SC Braga",
+      "Vitoria Guimaraes",
+      "Famalicao",
+      "Estoril"
+    ],
+    "feederLeagues": [],
+    "ties": [
+      "Ruben Neves",
+      "Joao Moutinho",
+      "Pedro Neto"
+    ],
+    "rivals": [],
+    "style": {
+      "youth": 7,
+      "veteran": 4,
+      "physical": 6,
+      "technical": 7,
+      "pace": 7
+    },
+    "ageIdeal": [
+      20,
+      30
+    ],
+    "notes": "Example of a strongly national pipeline: Portuguese agents and clubs. Relegated from the Premier League for 2026-27, so it appears here as a Championship side."
+  }
+]
