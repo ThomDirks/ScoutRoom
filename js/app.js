@@ -549,6 +549,7 @@
     (async () => {
       const first = extract(document);
       if (!first || !first.lines.length) { say('I can not see a player table here. Open a players list first (sofifa.com/players).'); return; }
+      if (first.cols.length < 30 && !confirm('Scout Room: this list only shows ' + first.cols.length + ' columns, and none of the player attributes (passing, pace, defending and so on). Without them I can not score system fit.\n\nPress Cancel, then on SoFIFA open the Columns menu, tick every attribute group (plus PlayStyles, Value, Wage and Release clause), let the page reload, and run this again.\n\nPress OK only if you want to read the list anyway.')) { say('stopped. Switch the attribute columns on first (Columns menu), then run it again.'); setTimeout(() => box.remove(), 15000); return; }
       const asked = prompt('How many pages should I read? Each page has ' + first.lines.length + ' players. Type 0 to read the whole list.', '10');
       if (asked === null) { box.remove(); return; }
       const maxPages = +asked > 0 ? +asked : 400;
@@ -585,7 +586,7 @@
       <ol class="how">
         <li><b>Copy the script.</b>
           <div class="row gap wrap"><button class="btn primary" data-act="copy-snippet">Copy the script</button><a class="btn" href="https://sofifa.com/players?type=all" target="_blank" rel="noopener">Open SoFIFA</a></div></li>
-        <li><b>Set up your list on SoFIFA.</b> Filter it to what you want (a league, a position, an age range, a minimum OVR). Use the <em>Columns</em> menu to switch on every attribute group plus Value, Wage and Release clause. The script reads whatever columns are showing.</li>
+        <li><b>Set up your list on SoFIFA.</b> Filter it to what you want (a league, a position, an age range, a minimum OVR). Open the <em>Columns</em> menu on SoFIFA and tick <b>every attribute group</b> (crossing, finishing, passing, pace, defending and the rest), plus PlayStyles, Value, Wage and Release clause. Total stats alone is not enough. Wait for the page to reload and check that the table is now much wider. The script reads exactly the columns on screen, and it warns you if the attributes are missing.</li>
         <li><b>Paste it into the console.</b> On that SoFIFA page press <code>F12</code>, open the <em>Console</em> tab, type <code>allow pasting</code> and press Enter (Chrome asks for this once), then paste the script and press Enter. Say how many pages you want. A box in the corner shows progress, and the file lands in your Downloads when it finishes.</li>
         <li><b>Upload the file here.</b> Lists merge, so you can scan one league at a time and upload each file in turn.
           <div class="drop" id="drop"><label class="btn primary file">Choose scout_room_players.tsv<input id="d-file" type="file" accept=".csv,.tsv,.txt"></label><span class="hint">or drop the file onto this box</span></div>
