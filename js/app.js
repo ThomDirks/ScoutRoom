@@ -12,7 +12,7 @@
   const defaultCareer = () => ({
     id: uid(), name: 'My career', clubId: 'brighton-hove-albion', now: { type: 'Summer', year: 2026 },
     formation: '3-2-3-2', budget: 60, wageCap: 150, markup: 1.2, realism: 0.8,
-    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], windows: [], watchlist: [],
+    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], sold: [], windows: [], watchlist: [],
   });
   function defaults() {
     const c = defaultCareer();
@@ -23,7 +23,7 @@
     if (s.ui.tab === 'targets') s.ui.tab = 'market';
     if (!s.ui.pos || s.ui.pos === 'ALL') s.ui.pos = 'LINEUP';
     if (!s.ui.f3) { s.ui.f3 = 1; s.ui.minOvr = 70; }
-    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; });
+    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; if (!c.sold) c.sold = []; });
     return s;
   }
   let S = defaults();
@@ -105,6 +105,7 @@
   const formation = () => E.FORMATIONS[career().formation] || E.FORMATIONS['3-2-3-2'];
   const slotAny = id => formation().slots.find(s => s.id === id) || E.posSlot(id);
   const ownKeys = () => new Set(career().squad || []);
+  const hiddenKeys = () => { const c = career(); return new Set([...(c.squad || []), ...(c.sold || []).map(x => x.key)]); };
   function ownPlayers() { const k = ownKeys(); return k.size ? DB.filter(p => k.has(p.key) && p.ovr != null) : []; }
   function passesFloor(p, ctx) {
     const u = S.ui;
@@ -141,7 +142,7 @@
   function rank(opts = {}) {
     const ctx = buildCtx(); const u = S.ui; const raw = !!opts.raw; const q = raw ? '' : E.norm(u.q);
     const cand = candidateSlots(opts.pos || u.pos);
-    const out = []; const own = ownKeys();
+    const out = []; const own = hiddenKeys();
     for (const p of DB) {
       if (p.ovr == null || own.has(p.key)) continue;
       if (!passesFloor(p, ctx)) continue;
@@ -205,7 +206,7 @@
 
   /* ----------------------------------------------------------------- Home */
   function bestXI(ctx) {
-    const slots = formation().slots; const used = new Set(); const res = {}; const own = ownKeys();
+    const slots = formation().slots; const used = new Set(); const res = {}; const own = hiddenKeys();
     const order = [...slots].sort((a, b) => (a.pos === 'GK' ? -1 : 0) - (b.pos === 'GK' ? -1 : 0));
     order.forEach(s => {
       let best = null;
@@ -422,8 +423,9 @@
       <div class="row gap wrap between"><label class="grow">Add a player by name or club<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Start typing a name"></label>
         <div class="row gap wrap bottomrow"><button class="btn" data-act="sq-club">Add everyone from ${esc((getProfile(c.clubId) || {}).name || 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear list</button></div></div>
       <div id="sq-msg" class="hint"></div><div id="sq-res" class="sqres">${sqResults(hits)}</div>
-      ${own.length ? `<div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th></th></tr></thead><tbody>
-        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}</section>`;
+      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
+        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
+      ${(c.sold || []).length ? `<h3>Sold</h3><ul class="soldlist">${c.sold.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="sq-undo" data-v="${esc(x.key)}">Undo</button><button class="link" data-act="sq-forget" data-v="${esc(x.key)}" title="Keep the sale but allow him as a target again">Allow as target</button></li>`).join('')}</ul>` : ''}</section>`;
   }
   const sqResults = hits => hits.length ? hits.map(p => `<button class="hit" data-act="sq-add" data-v="${esc(p.key)}"><b>${esc(p.name)}</b><span>${esc(p.positions.join('/'))} · ${p.ovr} OVR · ${esc(p.club || 'No club')}</span></button>`).join('') : '';
 
@@ -750,6 +752,18 @@
     if (act === 'age') { S.ui.maxAge = +v; save(); return renderView(); }
     if (act === 'own') { const i = c.squad.indexOf(v); if (i >= 0) c.squad.splice(i, 1); else c.squad.push(v); save(); renderView(); return renderDrawer(); }
     if (act === 'sq-add') { if (!c.squad.includes(v)) c.squad.push(v); S.ui.sqQ = ''; save(); return renderView(); }
+    if (act === 'sq-sell') {
+      const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = DB.find(x => x.key === v);
+      const fee = inp && inp.value !== '' ? +inp.value : (p && p.value ? Math.round(p.value / 1e5) / 10 : 0);
+      c.squad = c.squad.filter(k => k !== v); c.sold = c.sold || [];
+      c.sold.push({ key: v, name: p ? p.name : v, ovr: p ? p.ovr : null, fee: fee || 0, when: c.now.type + ' ' + c.now.year });
+      c.budget = Math.round((c.budget + (fee || 0)) * 10) / 10; save(); return renderAll();
+    }
+    if (act === 'sq-undo') {
+      const i = c.sold.findIndex(x => x.key === v); if (i < 0) return; const x = c.sold.splice(i, 1)[0];
+      if (!c.squad.includes(v)) c.squad.push(v); c.budget = Math.round((c.budget - (x.fee || 0)) * 10) / 10; save(); return renderAll();
+    }
+    if (act === 'sq-forget') { c.sold = c.sold.filter(x => x.key !== v); save(); return renderView(); }
     if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); save(); return renderView(); }
     if (act === 'sq-club') {
       const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
