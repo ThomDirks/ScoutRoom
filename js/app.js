@@ -12,17 +12,18 @@
   const defaultCareer = () => ({
     id: uid(), name: 'My career', clubId: 'brighton-hove-albion', now: { type: 'Summer', year: 2026 },
     formation: '3-2-3-2', budget: 60, wageCap: 150, markup: 1.2, realism: 0.8,
-    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, windows: [], watchlist: [],
+    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], windows: [], watchlist: [],
   });
   function defaults() {
     const c = defaultCareer();
-    return { v: 2, savedAt: 0, careers: [c], activeId: c.id, customProfiles: {}, hidden: [], ui: { tab: 'home', pos: 'LINEUP', sort: 'total', q: '', minOvr: 0, maxAge: 40, hideUnlikely: false, oop: false, affordable: false, limit: 48, view: 'list', drawer: null, squadSlot: null, loreId: null, loreQ: '' } };
+    return { v: 2, savedAt: 0, careers: [c], activeId: c.id, customProfiles: {}, hidden: [], ui: { f3: 1, tab: 'home', pos: 'LINEUP', sort: 'total', q: '', minOvr: 70, minPot: 0, maxPrice: 0, nat: '', contract: 'any', maxAge: 40, hideUnlikely: false, oop: false, affordable: false, limit: 48, view: 'list', drawer: null, squadSlot: null, loreId: null, loreQ: '' } };
   }
   function adopt(o) {
     const d = defaults(); const s = Object.assign(d, o, { ui: Object.assign(d.ui, o.ui || {}) });
     if (s.ui.tab === 'targets') s.ui.tab = 'market';
     if (!s.ui.pos || s.ui.pos === 'ALL') s.ui.pos = 'LINEUP';
-    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; });
+    if (!s.ui.f3) { s.ui.f3 = 1; s.ui.minOvr = 70; }
+    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; });
     return s;
   }
   let S = defaults();
@@ -103,13 +104,30 @@
   /* ------------------------------------------------------------- context */
   const formation = () => E.FORMATIONS[career().formation] || E.FORMATIONS['3-2-3-2'];
   const slotAny = id => formation().slots.find(s => s.id === id) || E.posSlot(id);
+  const ownKeys = () => new Set(career().squad || []);
+  function ownPlayers() { const k = ownKeys(); return k.size ? DB.filter(p => k.has(p.key) && p.ovr != null) : []; }
+  function passesFloor(p, ctx) {
+    const u = S.ui;
+    if (u.minOvr && p.ovr < u.minOvr) return false;
+    if (u.minPot && (p.pot == null || p.pot < u.minPot)) return false;
+    if (u.maxAge && p.age != null && p.age > u.maxAge) return false;
+    if (u.nat && !E.norm(p.nationality).includes(E.norm(u.nat))) return false;
+    if (u.contract === 'free' && !p.free) return false;
+    if (u.contract === 'expiring' && (p.free || p.contractEnd == null || p.contractEnd > ctx.seasonEnd)) return false;
+    if (u.maxPrice && !p.free && p.value != null && p.value * ctx.markup > u.maxPrice * 1e6) return false;
+    return true;
+  }
   function buildCtx() {
     const c = career(); const prof = getProfile(c.clubId);
     const pullInfo = E.clubPull(prof, c.windows);
     const seasonEnd = c.now.type === 'Summer' ? c.now.year + 1 : c.now.year;
     return {
       profile: prof, pull: pullInfo.pull, pullInfo, lookupClub, realism: c.realism, wageCap: c.wageCap * 1e3, budget: c.budget * 1e6, markup: c.markup, seasonEnd,
-      incumbentFor: slot => { if (c.incumbents[slot.id]) return c.incumbents[slot.id]; const m = formation().slots.find(s => s.pos === slot.pos && c.incumbents[s.id]); return m ? c.incumbents[m.id] : null; },
+      incumbentFor: slot => {
+        if (c.incumbents[slot.id]) return c.incumbents[slot.id];
+        let best = 0; ownPlayers().forEach(p => { const f = E.posFactor(p, slot); if (f > 0) best = Math.max(best, p.ovr * Math.min(1, f)); });
+        return best ? Math.round(best) : null;
+      },
       weights: c.weights, oop: S.ui.oop,
     };
   }
@@ -123,12 +141,11 @@
   function rank(opts = {}) {
     const ctx = buildCtx(); const u = S.ui; const raw = !!opts.raw; const q = raw ? '' : E.norm(u.q);
     const cand = candidateSlots(opts.pos || u.pos);
-    const out = [];
+    const out = []; const own = ownKeys();
     for (const p of DB) {
-      if (p.ovr == null) continue;
+      if (p.ovr == null || own.has(p.key)) continue;
+      if (!passesFloor(p, ctx)) continue;
       if (!raw) {
-        if (u.minOvr && p.ovr < u.minOvr) continue;
-        if (u.maxAge && p.age != null && p.age > u.maxAge) continue;
         if (q && !(E.norm(p.name).includes(q) || E.norm(p.club).includes(q) || E.norm(p.nationality).includes(q))) continue;
       }
       let best = null;
@@ -188,12 +205,12 @@
 
   /* ----------------------------------------------------------------- Home */
   function bestXI(ctx) {
-    const slots = formation().slots; const used = new Set(); const res = {};
+    const slots = formation().slots; const used = new Set(); const res = {}; const own = ownKeys();
     const order = [...slots].sort((a, b) => (a.pos === 'GK' ? -1 : 0) - (b.pos === 'GK' ? -1 : 0));
     order.forEach(s => {
       let best = null;
       for (const p of DB) {
-        if (used.has(p.key) || p.ovr == null) continue;
+        if (used.has(p.key) || p.ovr == null || own.has(p.key) || !passesFloor(p, ctx)) continue;
         if (!E.posFactor(p, s)) continue;
         const ev = E.evaluate(p, s, ctx);
         if (ev.will < 40) continue;
@@ -205,7 +222,7 @@
   }
 
   function pitchSVG(xi, selected, opts = {}) {
-    const f = formation(); const c = career();
+    const f = formation(); const c = career(); const pctx = buildCtx();
     const mpath = f.m.length ? f.m.map(id => f.slots.find(s => s.id === id)).filter(Boolean).map(s => `${s.x * 3.6},${s.y * 4.8}`).join(' ') : '';
     return `<svg viewBox="0 0 360 480" class="pitch" role="img" aria-label="Formation ${esc(f.label)}">
       <defs><linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10261f"/><stop offset="1" stop-color="#0b1a16"/></linearGradient></defs>
@@ -215,7 +232,7 @@
       <rect x="86" y="2" width="188" height="62" class="pl nofill"/><rect x="86" y="416" width="188" height="62" class="pl nofill"/>
       ${mpath ? `<polyline points="${mpath}" class="mline"/>` : ''}
       ${f.slots.map(s => {
-      const r = xi && xi[s.id]; const inc = c.incumbents[s.id]; const on = selected === s.id;
+      const r = xi && xi[s.id]; const inc = pctx.incumbentFor(s); const on = selected === s.id;
       const top = r ? r.p.ovr : (inc || '');
       const label = r ? shortName(r.p.name).split(' ').slice(-1)[0].slice(0, 11) : s.pos;
       return `<g class="node ${on ? 'on' : ''} ${r ? 'filled' : ''}" ${opts.click ? `data-act="${opts.click}" data-v="${s.id}" tabindex="0"` : ''} transform="translate(${s.x * 3.6},${s.y * 4.8})">
@@ -227,7 +244,7 @@
 
   function viewHome() {
     const c = career(); const prof = getProfile(c.clubId); const ctx = buildCtx(); const u = S.ui;
-    const all = rank({ pos: 'LINEUP', raw: true }).rows;
+    const all = rank({ pos: 'LINEUP', raw: true }).rows; const own = ownPlayers();
     const xi = bestXI(ctx); const slots = formation().slots;
     const filled = slots.filter(s => xi[s.id]).length;
     const word = ctx.pull >= 85 ? 'Almost any player will take your call.' : ctx.pull >= 70 ? 'Strong enough to pull most targets, with a few stars out of reach.' : ctx.pull >= 55 ? 'You can sign solid players, so aim at the right fit rather than the biggest name.' : 'Expect to win on fit and free agents. Stars will say no for now.';
@@ -242,6 +259,13 @@
     ].filter(r => r.rows.length);
     return `
     ${DEMO ? `<div class="banner"><div><strong>You are looking at demo players.</strong> They are made up so you can try everything. Load your SoFIFA scan to see real names.</div><a class="btn primary" href="#data" data-act="tab" data-v="data">Load real players</a></div>` : ''}
+    <section class="quick"><span class="lab">Show players</span>
+      ${[60, 65, 70, 75, 80, 85].map(n => `<button class="pill ${u.minOvr === n ? 'on' : ''}" data-act="ovr" data-v="${n}">${n}+</button>`).join('')}
+      <span class="lab sp">Age</span>
+      ${[[40, 'Any'], [30, 'Under 31'], [25, 'Under 26'], [21, 'Under 22']].map(([n, l]) => `<button class="pill ${u.maxAge === n ? 'on' : ''}" data-act="age" data-v="${n}">${l}</button>`).join('')}
+      <a class="link" href="#market" data-act="tab" data-v="market">More filters</a>
+      ${own.length ? `<span class="hint">Your ${own.length} players are left out.</span>` : ''}
+    </section>
     <section class="hero">
       <div class="hero-l">
         <p class="eyebrow">${esc(c.now.type)} ${c.now.year} window · ${esc(prof ? prof.league : '')}</p>
@@ -275,7 +299,11 @@
       <div class="grid4">
         <label>Search<input id="f-q" type="search" value="${esc(u.q)}" placeholder="Name, club or country"></label>
         <label>Min OVR<input id="f-min" type="number" min="0" max="99" value="${u.minOvr || ''}" placeholder="0"></label>
+        <label>Min potential<input id="f-pot" type="number" min="0" max="99" value="${u.minPot || ''}" placeholder="0"></label>
         <label>Max age<input id="f-age" type="number" min="15" max="45" value="${u.maxAge || ''}" placeholder="40"></label>
+        <label>Max price (€M)<input id="f-price" type="number" min="0" step="1" value="${u.maxPrice || ''}" placeholder="No limit"></label>
+        <label>Country<input id="f-nat" type="search" value="${esc(u.nat)}" placeholder="e.g. Portugal"></label>
+        <label>Contract<select id="f-con">${[['any', 'Any'], ['free', 'Free agents only'], ['expiring', 'Running out this season']].map(([k, l]) => `<option value="${k}" ${u.contract === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Sort by<select id="f-sort">${[['total', 'Total score'], ['fit', 'System fit'], ['will', 'Willingness'], ['lore', 'Lore'], ['ovr', 'OVR']].map(([k, l]) => `<option value="${k}" ${u.sort === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       </div>
       <div class="row wrap gap between">
@@ -342,6 +370,7 @@
           <div><dt>Clause</dt><dd>${p.release != null ? fmt(p.release) : '-'}</dd></div><div><dt>Contract</dt><dd>${p.free ? 'Free' : (p.contractEnd || '-')}</dd></div><div><dt>Foot</dt><dd>${p.foot || '-'}${p.weak ? ' · WF ' + p.weak : ''}</dd></div>
         </dl>
         <div class="row gap wrap"><button class="btn ${watched ? '' : 'primary'}" data-act="watch" data-v="${esc(p.key)}">${watched ? 'Remove from watchlist' : 'Add to watchlist'}</button>
+          <button class="btn" data-act="own" data-v="${esc(p.key)}">${career().squad.includes(p.key) ? 'Remove from my squad' : 'He is in my squad'}</button>
           <label class="inl">Judge as<select id="dr-pos">${[['LINEUP', 'Best slot in my lineup'], ['ANY', 'Best of any position'], ...E.POSITIONS.map(x => [x, x])].map(([k, l]) => `<option value="${k}" ${pos === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
         <div class="trio">
           <div><em>System fit</em><b>${ev.fit}</b></div><div><em>Signing</em><b class="${willClass(ev.willInfo.label)}">${ev.will}</b><small>${ev.willInfo.label}</small></div><div><em>Lore</em><b>${ev.lore}</b></div><div class="tot"><em>Total</em><b>${ev.total}</b></div>
@@ -375,14 +404,28 @@
       </section>
       <section class="panel">
         <h2>${esc(s.pos)} <span class="sub">${esc(role.name)}</span></h2>
-        <label>Your current starter's OVR<input id="s-inc" type="number" min="40" max="99" value="${c.incumbents[s.id] || ''}" placeholder="Leave empty for an open slot"></label>
+        <label>Your current starter's OVR<input id="s-inc" type="number" min="40" max="99" value="${c.incumbents[s.id] || ''}" placeholder="${ctx.incumbentFor(s) ? 'From your squad: ' + ctx.incumbentFor(s) : 'Leave empty for an open slot'}"></label>
         <h3>What this role looks for</h3>
         <p class="hint">${Object.entries(role.w).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k]) => k.replace(/([A-Z])/g, ' $1').toLowerCase()).join(', ')}.</p>
         <h3>Best targets for ${esc(s.pos)}</h3>
         ${top.length ? `<ol class="mini">${top.map(r => `<li data-act="open" data-v="${esc(r.p.key)}" data-pos="${s.id}" tabindex="0"><b>${esc(r.p.name)}</b><span>${r.p.ovr} OVR · ${esc(r.p.club || 'Free agent')} · ${r.ev.willInfo.label}</span><em>${r.ev.total}</em></li>`).join('')}</ol>` : '<p class="hint">Nobody in your data fits this slot yet.</p>'}
       </section>
-    </div>`;
+    </div>
+    ${squadPanel()}`;
   }
+  function squadPanel() {
+    const c = career(); const own = ownPlayers(); const slots = formation().slots; const q = E.norm(S.ui.sqQ || '');
+    const hits = q.length < 2 ? [] : DB.filter(p => !c.squad.includes(p.key) && (E.norm(p.name).includes(q) || E.norm(p.club).includes(q))).sort((a, b) => b.ovr - a.ovr).slice(0, 8);
+    const slotOf = p => { let b = null, bf = 0; slots.forEach(s => { const f = E.posFactor(p, s); if (f > bf) { bf = f; b = s; } }); return b ? b.pos : '-'; };
+    return `<section class="panel squadlist"><h2>Your players</h2>
+      <p class="hint">Add the players you already have. Their ratings set who you need to beat at each position, and they are left out of the targets.</p>
+      <div class="row gap wrap between"><label class="grow">Add a player by name or club<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Start typing a name"></label>
+        <div class="row gap wrap bottomrow"><button class="btn" data-act="sq-club">Add everyone from ${esc((getProfile(c.clubId) || {}).name || 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear list</button></div></div>
+      <div id="sq-msg" class="hint"></div><div id="sq-res" class="sqres">${sqResults(hits)}</div>
+      ${own.length ? `<div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th></th></tr></thead><tbody>
+        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}</section>`;
+  }
+  const sqResults = hits => hits.length ? hits.map(p => `<button class="hit" data-act="sq-add" data-v="${esc(p.key)}"><b>${esc(p.name)}</b><span>${esc(p.positions.join('/'))} · ${p.ovr} OVR · ${esc(p.club || 'No club')}</span></button>`).join('') : '';
 
   /* ---------------------------------------------------------------- Club */
   function viewClub() {
@@ -703,6 +746,17 @@
     if (t.tagName === 'SELECT' || t.tagName === 'INPUT') return;
     if (act === 'tab') { ev.preventDefault(); return setTab(v); }
     if (act === 'pos') { S.ui.pos = v; S.ui.limit = 48; save(); return renderView(); }
+    if (act === 'ovr') { S.ui.minOvr = +v; save(); return renderView(); }
+    if (act === 'age') { S.ui.maxAge = +v; save(); return renderView(); }
+    if (act === 'own') { const i = c.squad.indexOf(v); if (i >= 0) c.squad.splice(i, 1); else c.squad.push(v); save(); renderView(); return renderDrawer(); }
+    if (act === 'sq-add') { if (!c.squad.includes(v)) c.squad.push(v); S.ui.sqQ = ''; save(); return renderView(); }
+    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); save(); return renderView(); }
+    if (act === 'sq-club') {
+      const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
+      DB.forEach(p => { if (!p.demo && k && E.norm(p.club) === k && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
+      save(); renderView(); return flash($('#sq-msg'), n ? 'Added ' + n + ' players.' : 'No players with that club name in your data. Add them by name instead.');
+    }
+    if (act === 'sq-clear') { c.squad = []; save(); return renderView(); }
     if (act === 'view') { S.ui.view = v; save(); return renderView(); }
     if (act === 'open') { if (ev.target.closest('.star')) return; return openPlayer(v, t.dataset.pos); }
     if (act === 'close') return closeDrawer();
@@ -771,7 +825,7 @@
     if (t.dataset.act === 'w-status') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.status = t.value; save(); } return; }
     if (t.dataset.act === 'w-note') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.note = t.value; save(); } return; }
     const m = {
-      'f-min': () => { u.minOvr = +t.value || 0; }, 'f-age': () => { u.maxAge = +t.value || 0; }, 'f-sort': () => { u.sort = t.value; },
+      'f-min': () => { u.minOvr = +t.value || 0; }, 'f-pot': () => { u.minPot = +t.value || 0; }, 'f-price': () => { u.maxPrice = +t.value || 0; }, 'f-nat': () => { u.nat = t.value.trim(); }, 'f-con': () => { u.contract = t.value; }, 'f-age': () => { u.maxAge = +t.value || 0; }, 'f-sort': () => { u.sort = t.value; },
       'f-unl': () => { u.hideUnlikely = t.checked; }, 'f-aff': () => { u.affordable = t.checked; }, 'f-oop': () => { u.oop = t.checked; },
     };
     if (m[id]) { m[id](); u.limit = 48; save(); return renderResults(); }
@@ -788,6 +842,7 @@
     if (id === 'f-q') { S.ui.q = t.value; S.ui.limit = 48; clearTimeout(window.__qt); window.__qt = setTimeout(renderResults, 180); return; }
     if (id.startsWith('w-') && ['fit', 'will', 'lore'].includes(id.slice(2))) { const k = id.slice(2); c.weights[k] = +t.value; const b = $('#wv-' + k); if (b) b.textContent = t.value; save(); clearTimeout(window.__wt); window.__wt = setTimeout(renderResults, 120); return; }
     if (id.startsWith('e-') && ['youth', 'veteran', 'physical', 'technical', 'pace'].includes(id.slice(2))) { const b = $('#ev-' + id.slice(2)); if (b) b.textContent = t.value; return; }
+    if (id === 'sq-q') { S.ui.sqQ = t.value; const q = E.norm(t.value); const c2 = career(); const hits = q.length < 2 ? [] : DB.filter(p => !c2.squad.includes(p.key) && (E.norm(p.name).includes(q) || E.norm(p.club).includes(q))).sort((a, b) => b.ovr - a.ovr).slice(0, 8); $('#sq-res').innerHTML = sqResults(hits); return; }
     if (id === 'l-q') { S.ui.loreQ = t.value; const pos = t.selectionStart; renderView(); const n = $('#l-q'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
   });
   document.addEventListener('keydown', ev => {
