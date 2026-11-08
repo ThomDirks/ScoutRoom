@@ -12,7 +12,7 @@
   const defaultCareer = () => ({
     id: uid(), name: 'My career', clubId: 'brighton-hove-albion', now: { type: 'Summer', year: 2026 },
     formation: '3-2-3-2', budget: 60, wageCap: 150, markup: 1.2, realism: 0.8,
-    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], sold: [], windows: [], watchlist: [],
+    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], sold: [], bought: [], out: [], windows: [], watchlist: [],
   });
   function defaults() {
     const c = defaultCareer();
@@ -23,7 +23,7 @@
     if (s.ui.tab === 'targets') s.ui.tab = 'market';
     if (!s.ui.pos || s.ui.pos === 'ALL') s.ui.pos = 'LINEUP';
     if (!s.ui.f3) { s.ui.f3 = 1; s.ui.minOvr = 70; }
-    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; if (!c.sold) c.sold = []; });
+    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; if (!c.sold) c.sold = []; if (!c.bought) c.bought = []; if (!c.out) c.out = []; });
     return s;
   }
   let S = defaults();
@@ -373,6 +373,7 @@
         <div class="row gap wrap"><button class="btn ${watched ? '' : 'primary'}" data-act="watch" data-v="${esc(p.key)}">${watched ? 'Remove from watchlist' : 'Add to watchlist'}</button>
           <button class="btn" data-act="own" data-v="${esc(p.key)}">${career().squad.includes(p.key) ? 'Remove from my squad' : 'He is in my squad'}</button>
           <label class="inl">Judge as<select id="dr-pos">${[['LINEUP', 'Best slot in my lineup'], ['ANY', 'Best of any position'], ...E.POSITIONS.map(x => [x, x])].map(([k, l]) => `<option value="${k}" ${pos === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+        ${career().squad.includes(p.key) ? '' : `<div class="signbox"><label>Signed for (€M)<input id="dr-fee" type="number" min="0" step="0.5" value="${p.free ? 0 : Math.round((ev.willInfo.price || 0) / 1e5) / 10}"></label><button class="btn primary" data-act="sign" data-v="${esc(p.key)}">I signed him</button></div>`}
         <div class="trio">
           <div><em>System fit</em><b>${ev.fit}</b></div><div><em>Signing</em><b class="${willClass(ev.willInfo.label)}">${ev.will}</b><small>${ev.willInfo.label}</small></div><div><em>Lore</em><b>${ev.lore}</b></div><div class="tot"><em>Total</em><b>${ev.total}</b></div>
         </div>
@@ -423,9 +424,49 @@
       <div class="row gap wrap between"><label class="grow">Add a player by name or club<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Start typing a name"></label>
         <div class="row gap wrap bottomrow"><button class="btn" data-act="sq-club">Add everyone from ${esc((getProfile(c.clubId) || {}).name || 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear list</button></div></div>
       <div id="sq-msg" class="hint"></div><div id="sq-res" class="sqres">${sqResults(hits)}</div>
-      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
-        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
-      ${(c.sold || []).length ? `<h3>Sold</h3><ul class="soldlist">${c.sold.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="sq-undo" data-v="${esc(x.key)}">Undo</button><button class="link" data-act="sq-forget" data-v="${esc(x.key)}" title="Keep the sale but allow him as a target again">Allow as target</button></li>`).join('')}</ul>` : ''}</section>`;
+      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th>Injured</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
+        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><input type="checkbox" class="outbox" data-act="out" data-v="${esc(p.key)}" ${c.out.includes(p.key) ? 'checked' : ''} aria-label="${esc(p.name)} is injured or suspended"></td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
+      ${(c.sold || []).length ? `<h3>Sold</h3><ul class="soldlist">${c.sold.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="sq-undo" data-v="${esc(x.key)}">Undo</button><button class="link" data-act="sq-forget" data-v="${esc(x.key)}" title="Keep the sale but allow him as a target again">Allow as target</button></li>`).join('')}</ul>` : ''}
+      ${(c.bought || []).length ? `<h3>Signed</h3><ul class="soldlist">${c.bought.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="buy-undo" data-v="${esc(x.key)}">Undo</button><span></span></li>`).join('')}</ul>` : ''}</section>
+    ${coverPanel()}`;
+  }
+  /* Best XI from my own players. Injured ones are skipped. */
+  function ownXI(excludeOut) {
+    const c = career(); const slots = formation().slots; const ctx = buildCtx(); const out = new Set(excludeOut ? c.out : []);
+    const pool = ownPlayers().filter(p => !out.has(p.key));
+    const score = (p, s) => {
+      const f = E.posFactor(p, s); const o = !f; const fit = E.slotFit(p, s, { oop: true }).fit;
+      const oa = E.clamp((p.ovr * Math.min(1, f || 0.6) - 55) / 35 * 100);
+      return { p, slot: s, fit, ovr: p.ovr, oop: o, sc: 0.5 * oa + 0.5 * fit - (o ? 15 : 0) };
+    };
+    const order = [...slots].sort((a, b) => (a.pos === 'GK' ? -1 : 0) - (b.pos === 'GK' ? -1 : 0));
+    const used = new Set(); const xi = {};
+    order.forEach(s => {
+      const cand = pool.filter(p => !used.has(p.key) && (s.pos === 'GK') === (p.positions[0] === 'GK')).map(p => score(p, s)).sort((a, b) => b.sc - a.sc);
+      if (cand.length && (!cand[0].oop || s.pos !== 'GK')) { xi[s.id] = cand[0]; used.add(cand[0].p.key); }
+    });
+    return { xi, used, pool, score };
+  }
+  function coverPanel() {
+    const c = career(); const own = ownPlayers(); const slots = formation().slots;
+    if (own.length < 2) return `<section class="panel"><h2>Injuries and cover</h2><p class="hint">Add your players above. Then tick Injured on anyone who is out and this shows who steps in and how good the next options are.</p></section>`;
+    const base = ownXI(false); const now = ownXI(true);
+    const rows = slots.map(s => {
+      const b = base.xi[s.id]; const n = now.xi[s.id];
+      const bench = now.pool.filter(p => !now.used.has(p.key)).map(p => now.score(p, s)).filter(r => !r.oop).sort((a, b2) => b2.sc - a.sc).slice(0, 3);
+      const changed = n && b && n.p.key !== b.p.key;
+      const drop = n && b ? b.ovr - n.ovr : null;
+      return { s, b, n, bench, changed, drop };
+    });
+    const outP = own.filter(p => c.out.includes(p.key));
+    return `<section class="panel cover"><h2>Injuries and cover</h2>
+      <p class="hint">Tick <b>Injured</b> next to a player in the list above. The lineup is rebuilt from the players who are left, and every slot shows the best cover on the bench.${outP.length ? ` Out now: <b>${outP.map(p => esc(p.name)).join(', ')}</b>. <button class="link" data-act="out-clear">Everyone is fit</button>` : ''}</p>
+      <div class="tablewrap"><table class="tbl small"><thead><tr><th>Slot</th><th>Plays</th><th class="num">OVR</th><th class="num">Fit</th><th>Best cover on the bench</th></tr></thead><tbody>
+      ${rows.map(r => `<tr class="${r.changed ? 'chg' : ''}"><td><b>${r.s.pos}</b></td>
+        <td>${r.n ? `<span class="pname">${esc(r.n.p.name)}${r.n.oop ? '<span class="tag bad">out of position</span>' : ''}${r.changed ? '<span class="tag">cover</span>' : ''}</span>` : '<span class="bad">Nobody</span>'}</td>
+        <td class="num">${r.n ? r.n.ovr : '-'}${r.changed && r.drop > 0 ? `<small class="bad"> −${r.drop}</small>` : ''}</td><td class="num">${r.n ? Math.round(r.n.fit) : '-'}</td>
+        <td>${r.bench.length ? r.bench.map(x => `<span class="chipc" title="Fit ${Math.round(x.fit)}">${esc(shortName(x.p.name))} <i>${x.ovr}</i></span>`).join('') : `<span class="warn">No cover. <a class="link" href="#market" data-act="mk" data-v="${r.s.pos}">Find a ${r.s.pos}</a></span>`}</td></tr>`).join('')}
+      </tbody></table></div></section>`;
   }
   const sqResults = hits => hits.length ? hits.map(p => `<button class="hit" data-act="sq-add" data-v="${esc(p.key)}"><b>${esc(p.name)}</b><span>${esc(p.positions.join('/'))} · ${p.ovr} OVR · ${esc(p.club || 'No club')}</span></button>`).join('') : '';
 
@@ -748,14 +789,31 @@
     if (t.tagName === 'SELECT' || t.tagName === 'INPUT') return;
     if (act === 'tab') { ev.preventDefault(); return setTab(v); }
     if (act === 'pos') { S.ui.pos = v; S.ui.limit = 48; save(); return renderView(); }
+    if (act === 'mk') { ev.preventDefault(); S.ui.pos = v; S.ui.tab = 'market'; save(); return renderAll(); }
     if (act === 'ovr') { S.ui.minOvr = +v; save(); return renderView(); }
     if (act === 'age') { S.ui.maxAge = +v; save(); return renderView(); }
     if (act === 'own') { const i = c.squad.indexOf(v); if (i >= 0) c.squad.splice(i, 1); else c.squad.push(v); save(); renderView(); return renderDrawer(); }
     if (act === 'sq-add') { if (!c.squad.includes(v)) c.squad.push(v); S.ui.sqQ = ''; save(); return renderView(); }
+    if (act === 'sign') {
+      const p = DB.find(x => x.key === v) || (c.watchlist.find(w => w.key === v) || {}).snap; if (!p) return;
+      const inp = document.querySelector('#dr-fee'); const fee = inp && inp.value !== '' ? +inp.value : 0;
+      if (!c.squad.includes(v)) c.squad.push(v);
+      c.sold = (c.sold || []).filter(x => x.key !== v);
+      c.bought.push({ key: v, name: p.name, ovr: p.ovr, fee, when: c.now.type + ' ' + c.now.year });
+      c.budget = Math.round((c.budget - fee) * 10) / 10;
+      const w = c.watchlist.find(x => x.key === v); if (w) w.status = 'Bought';
+      S.ui.drawer = null; save(); return renderAll();
+    }
+    if (act === 'buy-undo') {
+      const i = c.bought.findIndex(x => x.key === v); if (i < 0) return; const x = c.bought.splice(i, 1)[0];
+      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); c.budget = Math.round((c.budget + (x.fee || 0)) * 10) / 10;
+      const w = c.watchlist.find(y => y.key === v); if (w && w.status === 'Bought') w.status = 'Target'; save(); return renderAll();
+    }
+    if (act === 'out-clear') { c.out = []; save(); return renderView(); }
     if (act === 'sq-sell') {
       const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = DB.find(x => x.key === v);
       const fee = inp && inp.value !== '' ? +inp.value : (p && p.value ? Math.round(p.value / 1e5) / 10 : 0);
-      c.squad = c.squad.filter(k => k !== v); c.sold = c.sold || [];
+      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); c.sold = c.sold || [];
       c.sold.push({ key: v, name: p ? p.name : v, ovr: p ? p.ovr : null, fee: fee || 0, when: c.now.type + ' ' + c.now.year });
       c.budget = Math.round((c.budget + (fee || 0)) * 10) / 10; save(); return renderAll();
     }
@@ -764,7 +822,7 @@
       if (!c.squad.includes(v)) c.squad.push(v); c.budget = Math.round((c.budget - (x.fee || 0)) * 10) / 10; save(); return renderAll();
     }
     if (act === 'sq-forget') { c.sold = c.sold.filter(x => x.key !== v); save(); return renderView(); }
-    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); save(); return renderView(); }
+    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); save(); return renderView(); }
     if (act === 'sq-club') {
       const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
       DB.forEach(p => { if (!p.demo && k && E.norm(p.club) === k && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
@@ -836,6 +894,7 @@
     const t = ev.target; const id = t.id; const c = career(); const u = S.ui;
     if (id === 'd-file') { const f = t.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => doImport(String(rd.result)); rd.readAsText(f); return; }
     if (id === 'dr-pos') { u.drawer.pos = t.value; return renderDrawer(); }
+    if (t.dataset.act === 'out') { const k = t.dataset.v; c.out = c.out.filter(x => x !== k); if (t.checked) c.out.push(k); save(); return renderView(); }
     if (t.dataset.act === 'w-status') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.status = t.value; save(); } return; }
     if (t.dataset.act === 'w-note') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.note = t.value; save(); } return; }
     const m = {
