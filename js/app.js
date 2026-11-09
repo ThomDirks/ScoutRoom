@@ -523,8 +523,7 @@
         </ul>
       </div>
       <p class="sh-h">PlayStyles</p>
-      <div class="sh-ps">${slots10.map(k => k ? `<span class="on ${/plus$/.test(k) ? 'pl' : ''}" title="${esc(psLabel(k))}"><i></i>${psIcon(k)}<small>${esc(psLabel(k))}</small></span>` : '<span class="off"><i></i></span>').join('')}</div>
-      ${ps.length ? `<p class="sh-psn">${ps.map(k => esc(psLabel(k))).join(' · ')}</p>` : ''}
+      ${ps.length ? `<ul class="sh-pst">${ps.map(k => { const pl = /plus$/.test(k) && !PS_LABEL[k]; return `<li class="${pl ? 'gold' : 'silver'}">${esc(psLabel(k).replace(/\s*\+$/, ''))}${pl ? '<b>+</b>' : ''}</li>`; }).join('')}</ul>` : '<p class="hint">No PlayStyles listed.</p>'}
     </div>`;
   }
 
