@@ -528,35 +528,54 @@
   }
 
   /* ------------------------------------------------- team management (pitch of cards + bench + sheet) */
-  function miniCard(p, slotPos, on, act, v, extra) {
-    return `<div class="mc ${tierOf(p.ovr, false)} ${on ? 'on' : ''}" data-act="${act}" data-v="${esc(v)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr}">
+  function miniCard(p, slotPos, on, act, v, drag, flag) {
+    return `<div class="mc ${tierOf(p.ovr, false)} ${on ? 'on' : ''} ${flag ? 'oop' : ''}" draggable="true" data-drag="${esc(drag)}" data-act="${act}" data-v="${esc(v)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr}">
       <b class="mc-o">${p.ovr}</b><span class="mc-p">${esc(slotPos || p.positions[0] || '')}</span>
       <div class="mc-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
-      <span class="mc-n">${esc(shortName(p.name).split(' ').slice(-1)[0])}</span>${extra || ''}</div>`;
+      <span class="mc-n">${esc(shortName(p.name).split(' ').slice(-1)[0])}</span>${flag ? '<em class="mc-flag">Out of position</em>' : ''}</div>`;
   }
+  const squadSearch = () => {
+    const c = career(); const q = E.norm(S.ui.sqQ || '');
+    const hits = q.length < 2 ? [] : DB.filter(p => !c.squad.includes(p.key) && (E.norm(p.name).includes(q) || E.norm(p.club).includes(q))).sort((a, b) => b.ovr - a.ovr).slice(0, 8);
+    return `<div class="tm-add"><label>Add a player<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Type a name or club, then drag him onto the pitch or bench" autocomplete="off"></label><div id="sq-res" class="sqres">${sqResults(hits)}</div><div id="sq-msg" class="hint"></div></div>`;
+  };
   function teamManagement() {
-    const c = career(); const f = formation(); const own = ownPlayers();
-    if (!own.length) return `<section class="panel tm-empty"><div class="empty"><h3>Add your players</h3><p>Type a name below, or add everyone from your club. They show up here on the pitch like the in-game squad screen.</p></div><label class="inl">Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label></section>`;
+    const c = career(); const f = formation(); const own = ownPlayers(); const prof = getProfile(c.clubId);
+    const formSel = `<label class="inl">Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>`;
+    const tools = `<div class="row gap wrap"><button class="btn" data-act="sq-club">Add everyone from ${esc(prof ? prof.name : 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear squad</button></div>`;
+    if (!own.length) return `<div class="tm"><section class="panel tm-left"><div class="tm-bar"><div class="tm-t"><h2>Team management</h2></div>${formSel}</div>
+      <div class="empty"><h3>Add your players</h3><p>Search a name below, or add your whole club in one click. Then drag players around the pitch.</p></div>${tools}${squadSearch()}</section>
+      <section class="panel tm-right"><div class="empty"><p class="hint">Click a player to see his details here.</p></div></section></div>`;
     const { xi, used, pool } = ownXI(true);
     const subs = pool.filter(p => !used.has(p.key)).sort((a, b) => b.ovr - a.ovr);
+    const hurt = own.filter(p => c.out.includes(p.key)).sort((a, b) => b.ovr - a.ovr);
     const firstKey = (Object.values(xi)[0] || {}).p ? Object.values(xi)[0].p.key : own[0].key;
-    const selKey = S.ui.squadSel && byKey(S.ui.squadSel) && c.squad.includes(S.ui.squadSel) ? S.ui.squadSel : firstKey;
-    const sel = byKey(selKey);
-    const avg = Object.values(xi).length ? Math.round(Object.values(xi).reduce((a, r) => a + r.p.ovr, 0) / Object.values(xi).length * 10) / 10 : null;
+    const selKey = S.ui.squadSel && c.squad.includes(S.ui.squadSel) && byKey(S.ui.squadSel) ? S.ui.squadSel : firstKey;
+    const sel = byKey(selKey); const isHurt = c.out.includes(sel.key);
+    const vals = Object.values(xi);
+    const avg = vals.length ? Math.round(vals.reduce((a, r) => a + r.p.ovr, 0) / vals.length * 10) / 10 : null;
+    const fee = sel.value ? Math.round(sel.value / 1e5) / 10 : '';
     return `<div class="tm">
       <section class="panel tm-left">
-        <div class="tm-bar"><div class="tm-t"><h2>Team management</h2><span class="hint">${avg != null ? 'Starting XI average ' + avg : ''}</span></div>
-          <label class="inl">Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label></div>
+        <div class="tm-bar"><div class="tm-t"><h2>Team management</h2><span class="hint">${avg != null ? 'Starting XI average ' + avg : ''}</span></div>${formSel}</div>
+        <p class="hint tm-help">Drag a player onto a position to start him, onto the bench to rest him, or onto another player to swap. Click a card to see details.</p>
         <div class="tm-pitch" role="group" aria-label="Starting lineup">
           <i class="ln mid"></i><i class="ln circ"></i><i class="ln box t"></i><i class="ln box b"></i>
-          ${f.slots.map(s => { const r = xi[s.id]; const st = `left:${s.x}%;top:${s.y}%`; return r ? `<div class="slot" style="${st}">${miniCard(r.p, s.pos, r.p.key === selKey, 'sq-pick', s.id + '|' + r.p.key)}</div>` : `<div class="slot" style="${st}"><div class="mc open" data-act="sq" data-v="${s.id}" tabindex="0"><span class="mc-p">${s.pos}</span><span class="mc-n">open</span></div></div>`; }).join('')}
+          ${f.slots.map(s => { const r = xi[s.id]; const st = `left:${s.x}%;top:${s.y}%`; return `<div class="slot" style="${st}" data-drop="slot:${esc(s.id)}">${r ? miniCard(r.p, s.pos, r.p.key === selKey, 'sq-pick', s.id + '|' + r.p.key, 'slot:' + s.id + '|' + r.p.key, r.oop) : `<div class="mc open" data-act="sq" data-v="${esc(s.id)}" tabindex="0"><span class="mc-p">${esc(s.pos)}</span><span class="mc-n">drop here</span></div>`}</div>`; }).join('')}
         </div>
-        <p class="sub-h">Substitutes</p>
-        <div class="tm-bench">${subs.length ? subs.map(p => miniCard(p, p.positions[0], p.key === selKey, 'sq-sel', p.key)).join('') : '<span class="hint">Nobody on the bench yet.</span>'}</div>
+        <div class="tm-benchhead"><p class="sub-h">Bench <span class="dim">${subs.length}</span></p>${tools}</div>
+        <div class="tm-bench" data-drop="bench">${subs.length ? subs.map(p => miniCard(p, p.positions[0], p.key === selKey, 'sq-sel', p.key, 'bench|' + p.key, false)).join('') : '<span class="hint">Nobody on the bench. Drop players here to rest them.</span>'}</div>
+        ${hurt.length ? `<p class="sub-h">Unavailable <span class="dim">${hurt.length}</span> <button class="link" data-act="out-clear">All fit again</button></p><div class="tm-bench hurt">${hurt.map(p => miniCard(p, p.positions[0], p.key === selKey, 'sq-sel', p.key, 'bench|' + p.key, false)).join('')}</div>` : ''}
+        ${squadSearch()}
       </section>
       <section class="panel tm-right">
         ${sheet(sel, null)}
-        <div class="row gap wrap sh-act"><button class="btn" data-act="open" data-v="${esc(sel.key)}">Full profile</button></div>
+        <div class="sh-manage">
+          <label class="inl">Number<input class="numin" type="number" min="1" max="99" data-numfor="${esc(sel.key)}" value="${numOf(sel.key) || ''}" aria-label="Squad number for ${esc(sel.name)}"></label>
+          <label class="chk"><input type="checkbox" class="outbox" data-act="out" data-v="${esc(sel.key)}" ${isHurt ? 'checked' : ''}> Injured or suspended</label>
+        </div>
+        <div class="sh-manage sell"><label class="inl">Sell for (€M)<span class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(sel.key)}" value="${fee}"><button class="btn" data-act="sq-sell" data-v="${esc(sel.key)}">Sell</button></span></label>
+          <button class="btn" data-act="sq-rm" data-v="${esc(sel.key)}">Remove from squad</button><button class="btn" data-act="open" data-v="${esc(sel.key)}">Full profile</button></div>
       </section>
     </div>`;
   }
@@ -591,14 +610,9 @@
     const c = career(); const own = ownPlayers(); const slots = formation().slots; const q = E.norm(S.ui.sqQ || '');
     const hits = q.length < 2 ? [] : DB.filter(p => !c.squad.includes(p.key) && (E.norm(p.name).includes(q) || E.norm(p.club).includes(q))).sort((a, b) => b.ovr - a.ovr).slice(0, 8);
     const slotOf = p => { let b = null, bf = 0; slots.forEach(s => { const f = E.posFactor(p, s); if (f > bf) { bf = f; b = s; } }); return b ? b.pos : '-'; };
-    return `<section class="panel squadlist"><h2>Your players</h2>
-      <p class="hint">Add the players you already have. Their ratings set who you need to beat at each position, and they are left out of the targets.</p>
-      <div class="row gap wrap between"><label class="grow">Add a player by name or club<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Start typing a name"></label>
-        <div class="row gap wrap bottomrow"><button class="btn" data-act="sq-club">Add everyone from ${esc((getProfile(c.clubId) || {}).name || 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear list</button></div></div>
-      <div id="sq-msg" class="hint"></div>
-      ${Object.keys(c.numbers).length ? `<div class="numstrip">${Object.entries(c.numbers).sort((a, b) => a[1] - b[1]).map(([k, n]) => `<span class="shirt ${c.squad.includes(k) ? '' : 'res'}" title="${esc(nameOfKey(k))}${c.squad.includes(k) ? '' : ' (reserved)'}"><b>${n}</b>${esc(nameOfKey(k).split(' ').slice(-1)[0])}</span>`).join('')}</div>` : ''}<div id="sq-res" class="sqres">${sqResults(hits)}</div>
-      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th class="num">No.</th><th>Injured</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
-        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td class="num"><input class="numin" type="number" min="1" max="99" data-numfor="${esc(p.key)}" value="${numOf(p.key) || ''}" aria-label="Squad number for ${esc(p.name)}"></td><td><input type="checkbox" class="outbox" data-act="out" data-v="${esc(p.key)}" ${c.out.includes(p.key) ? 'checked' : ''} aria-label="${esc(p.name)} is injured or suspended"></td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
+    return `<section class="panel squadlist"><h2>Squad numbers, sales and signings</h2>
+      ${Object.keys(c.numbers).length ? `<div class="numstrip">${Object.entries(c.numbers).sort((a, b) => a[1] - b[1]).map(([k, n]) => `<span class="shirt ${c.squad.includes(k) ? '' : 'res'}" title="${esc(nameOfKey(k))}${c.squad.includes(k) ? '' : ' (reserved)'}"><b>${n}</b>${esc(nameOfKey(k).split(' ').slice(-1)[0])}</span>`).join('')}</div>` : '<p class="hint">Numbers you hand out show up here.</p>'}
+      <p class="hint">Sell adds the price to your budget and moves the player to the sold list, so he is not suggested as a target. Remove only takes him off your squad.</p>
       ${(c.sold || []).length ? `<h3>Sold</h3><ul class="soldlist">${c.sold.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="sq-undo" data-v="${esc(x.key)}">Undo</button><button class="link" data-act="sq-forget" data-v="${esc(x.key)}" title="Keep the sale but allow him as a target again">Allow as target</button></li>`).join('')}</ul>` : ''}
       ${(c.bought || []).length ? `<h3>Signed</h3><ul class="soldlist">${c.bought.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="buy-undo" data-v="${esc(x.key)}">Undo</button><span></span></li>`).join('')}</ul>` : ''}</section>
     ${coverPanel()}`;
@@ -630,17 +644,19 @@
 
   /* Best XI from my own players. Injured ones are skipped. */
   function ownXI(excludeOut) {
-    const c = career(); const slots = formation().slots; const ctx = buildCtx(); const out = new Set(excludeOut ? c.out : []);
+    const c = career(); const slots = formation().slots; const out = new Set(excludeOut ? c.out : []);
     const pool = ownPlayers().filter(p => !out.has(p.key));
     const score = (p, s) => {
       const f = E.posFactor(p, s); const o = !f; const fit = E.slotFit(p, s, { oop: true }).fit;
       const oa = E.clamp((p.ovr * Math.min(1, f || 0.6) - 55) / 35 * 100);
       return { p, slot: s, fit, ovr: p.ovr, oop: o, sc: 0.5 * oa + 0.5 * fit - (o ? 15 : 0) };
     };
+    const benched = new Set(c.benched || []); const used = new Set(); const xi = {};
+    slots.forEach(s => { const k = (c.lineup || {})[s.id]; const p = k && !used.has(k) ? pool.find(q => q.key === k) : null; if (p) { xi[s.id] = Object.assign(score(p, s), { pinned: true }); used.add(k); } });
     const order = [...slots].sort((a, b) => (a.pos === 'GK' ? -1 : 0) - (b.pos === 'GK' ? -1 : 0));
-    const used = new Set(); const xi = {};
     order.forEach(s => {
-      const cand = pool.filter(p => !used.has(p.key) && (s.pos === 'GK') === (p.positions[0] === 'GK')).map(p => score(p, s)).sort((a, b) => b.sc - a.sc);
+      if (xi[s.id]) return;
+      const cand = pool.filter(p => !used.has(p.key) && !benched.has(p.key) && (s.pos === 'GK') === (p.positions[0] === 'GK')).map(p => score(p, s)).sort((a, b) => b.sc - a.sc);
       if (cand.length && (!cand[0].oop || s.pos !== 'GK')) { xi[s.id] = cand[0]; used.add(cand[0].p.key); }
     });
     return { xi, used, pool, score };
@@ -666,7 +682,7 @@
         <td>${r.bench.length ? r.bench.map(x => `<span class="chipc" title="Fit ${Math.round(x.fit)}">${esc(shortName(x.p.name))} <i>${x.ovr}</i></span>`).join('') : `<span class="warn">No cover. <a class="link" href="#market" data-act="mk" data-v="${r.s.pos}">Find a ${r.s.pos}</a></span>`}</td></tr>`).join('')}
       </tbody></table></div></section>`;
   }
-  const sqResults = hits => hits.length ? hits.map(p => `<button class="hit" data-act="sq-add" data-v="${esc(p.key)}"><b>${esc(p.name)}</b><span>${esc(p.positions.join('/'))} · ${p.ovr} OVR · ${esc(p.club || 'No club')}</span></button>`).join('') : '';
+  const sqResults = hits => hits.length ? hits.map(p => `<button class="hit" draggable="true" data-drag="new|${esc(p.key)}" data-act="sq-add" data-v="${esc(p.key)}"><b>${esc(p.name)}</b><span>${esc(p.positions.join('/'))} · ${p.ovr} OVR · ${esc(p.club || 'No club')}</span></button>`).join('') : '';
 
   /* ---------------------------------------------------------------- Club */
   function viewClub() {
@@ -994,6 +1010,28 @@
     return { id: o.id || slug(o.name), name: String(o.name), league: String(o.league || 'Other'), country: String(o.country || ''), prestige: E.clamp(num(+o.prestige, 55)), sources, feeders: arr(o.feeders), feederLeagues: arr(o.feederLeagues), ties: arr(o.ties), rivals: arr(o.rivals), style: { youth: num(st.youth, 5), veteran: num(st.veteran, 5), physical: num(st.physical, 5), technical: num(st.technical, 5), pace: num(st.pace, 5) }, ageIdeal: Array.isArray(o.ageIdeal) && o.ageIdeal.length === 2 ? o.ageIdeal.map(Number) : [18, 32], notes: String(o.notes || ''), builtin: false };
   }
 
+  /* ---- drag and drop lineup: c.lineup pins a player to a slot, c.benched keeps him out of the automatic XI ---- */
+  function unpin(c, key) { c.lineup = c.lineup || {}; Object.keys(c.lineup).forEach(sl => { if (c.lineup[sl] === key) delete c.lineup[sl]; }); c.benched = (c.benched || []).filter(k => k !== key); }
+  function placePlayer(key, src, dst) {
+    const c = career(); c.lineup = c.lineup || {}; c.benched = c.benched || [];
+    if (!byKey(key)) return;
+    if (!c.squad.includes(key)) { c.squad.push(key); c.sold = (c.sold || []).filter(x => x.key !== key); }
+    const xi = ownXI(true).xi; const dslot = dst.indexOf('slot:') === 0 ? dst.slice(5) : null; const sslot = src.indexOf('slot:') === 0 ? src.slice(5) : null;
+    const clear = k => { Object.keys(c.lineup).forEach(sl => { if (c.lineup[sl] === k) delete c.lineup[sl]; }); };
+    if (dslot) {
+      const disp = xi[dslot] && xi[dslot].p.key !== key ? xi[dslot].p.key : null;
+      clear(key); c.benched = c.benched.filter(k => k !== key);
+      if (disp) { clear(disp); if (sslot) { c.lineup[sslot] = disp; c.benched = c.benched.filter(k => k !== disp); } else if (c.benched.indexOf(disp) < 0) c.benched.push(disp); }
+      c.lineup[dslot] = key;
+    } else { clear(key); if (c.benched.indexOf(key) < 0) c.benched.push(key); }
+    c.out = c.out.filter(k => k !== key); S.ui.squadSel = key; S.ui.sqQ = ''; save(); renderView();
+  }
+  const dz = ev => ev.target.closest && ev.target.closest('[data-drop]');
+  document.addEventListener('dragstart', ev => { const t = ev.target.closest && ev.target.closest('[data-drag]'); if (!t) return; ev.dataTransfer.setData('text/plain', t.dataset.drag); ev.dataTransfer.effectAllowed = 'move'; t.classList.add('dragging'); document.body.classList.add('dnd'); });
+  document.addEventListener('dragend', () => { document.body.classList.remove('dnd'); document.querySelectorAll('.dragging,.over').forEach(e => e.classList.remove('dragging', 'over')); });
+  document.addEventListener('dragover', ev => { const z = dz(ev); if (!z) return; ev.preventDefault(); ev.dataTransfer.dropEffect = 'move'; document.querySelectorAll('.over').forEach(e => { if (e !== z) e.classList.remove('over'); }); z.classList.add('over'); });
+  document.addEventListener('drop', ev => { const z = dz(ev); if (!z) return; ev.preventDefault(); const raw = ev.dataTransfer.getData('text/plain'); const i = raw.indexOf('|'); document.body.classList.remove('dnd'); if (i < 0) return; placePlayer(raw.slice(i + 1), raw.slice(0, i), z.dataset.drop); });
+
   document.addEventListener('click', async ev => {
     const t = ev.target.closest('[data-act]'); const ov = ev.target.id === 'scrim';
     if (ov) return closeDrawer();
@@ -1035,7 +1073,7 @@
     if (act === 'sq-sell') {
       const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = byKey(v);
       const fee = inp && inp.value !== '' ? +inp.value : (p && p.value ? Math.round(p.value / 1e5) / 10 : 0);
-      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; c.sold = c.sold || [];
+      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; unpin(c, v); c.sold = c.sold || [];
       c.sold.push({ key: v, name: p ? p.name : v, ovr: p ? p.ovr : null, fee: fee || 0, when: c.now.type + ' ' + c.now.year });
       c.budget = Math.round((c.budget + (fee || 0)) * 10) / 10; save(); return renderAll();
     }
@@ -1044,13 +1082,13 @@
       if (!c.squad.includes(v)) c.squad.push(v); c.budget = Math.round((c.budget - (x.fee || 0)) * 10) / 10; save(); return renderAll();
     }
     if (act === 'sq-forget') { c.sold = c.sold.filter(x => x.key !== v); save(); return renderView(); }
-    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; save(); return renderView(); }
+    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; unpin(c, v); save(); return renderView(); }
     if (act === 'sq-club') {
       const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
       DB.forEach(p => { if (!p.demo && k && E.sameClub(p.club, prof.name) && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
       save(); renderView(); return flash($('#sq-msg'), n ? 'Added ' + n + ' players.' : 'No players with that club name in your data. Add them by name instead.');
     }
-    if (act === 'sq-clear') { c.squad = []; save(); return renderView(); }
+    if (act === 'sq-clear') { c.squad = []; c.lineup = {}; c.benched = []; save(); return renderView(); }
     if (act === 'view') { S.ui.view = v; save(); return renderView(); }
     if (act === 'open') { if (ev.target.closest('.star')) return; return openPlayer(v, t.dataset.pos); }
     if (act === 'close') return closeDrawer();
@@ -1131,7 +1169,7 @@
     const cm = {
       'c-name': () => { c.name = t.value; }, 'c-club': () => { c.clubId = t.value; }, 'c-wtype': () => { c.now.type = t.value; }, 'c-wyear': () => { c.now.year = +t.value || 2026; },
       'c-bud': () => { c.budget = +t.value || 0; }, 'c-wage': () => { c.wageCap = +t.value || 0; }, 'c-mark': () => { c.markup = +t.value; }, 'c-real': () => { c.realism = +t.value; },
-      's-form': () => { c.formation = t.value; u.squadSlot = null; }, 's-inc': () => { const s = u.squadSlot || formation().slots[0].id; if (t.value) c.incumbents[s] = +t.value; else delete c.incumbents[s]; },
+      's-form': () => { c.formation = t.value; u.squadSlot = null; c.lineup = {}; }, 's-inc': () => { const s = u.squadSlot || formation().slots[0].id; if (t.value) c.incumbents[s] = +t.value; else delete c.incumbents[s]; },
     };
     if (cm[id]) { cm[id](); save(); return renderAll(); }
     if (id === 'c-switch') { S.activeId = t.value; save(); return renderAll(); }

@@ -425,3 +425,25 @@ main{max-width:1500px;margin:0 auto;padding:22px 30px 100px}
 .sh-pst .silver{background:linear-gradient(145deg,#f4f7fb,#c4cedd);color:#0a111b}
 .sh-pst .gold{background:linear-gradient(145deg,#ffe58a,#e0a92e);color:#1a1204;box-shadow:0 0 14px #f1c24a55}
 .sh-pst b{font-weight:800}
+
+/* ===== squad v2: drag and drop ===== */
+.mc[draggable=true]{cursor:grab}.mc.dragging{opacity:.35;transform:scale(.96)}
+.dnd .slot,.dnd .tm-bench{outline:1.5px dashed #c6ff3d44;outline-offset:3px;border-radius:12px}
+.slot.over,.tm-bench.over{outline:2px solid var(--lime)!important;background:#c6ff3d1a;box-shadow:0 0 24px #c6ff3d44}
+.slot{padding:4px}
+.tm-help{margin:0 0 12px}
+.tm-bench{min-height:104px;padding:10px 8px;border:1.5px dashed #ffffff1f;border-radius:12px;background:#0a111b88}
+.tm-bench.hurt{border-color:#ff5d6c55}.tm-bench.hurt .mc{filter:saturate(.3);opacity:.8}
+.tm-benchhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px}.tm-benchhead .sub-h{margin:14px 0 8px}
+.mc.oop{box-shadow:0 0 0 2px var(--coral),0 6px 16px #0008}.mc-flag{display:none;position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);white-space:nowrap;background:var(--coral);color:#190509;font:800 9px/1 var(--bd);font-style:normal;text-transform:uppercase;padding:3px 6px;border-radius:5px}.mc.oop .mc-flag{display:block}
+.tm-add{margin-top:16px;position:relative}.tm-add label{display:block;font-weight:600;font-size:13px;color:var(--dim)}.tm-add input{width:100%;margin-top:6px}
+.sqres{display:flex;flex-direction:column;gap:6px;margin-top:8px}.sqres:empty{display:none}
+.sqres .hit{display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left;padding:10px 14px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);cursor:grab;color:var(--tx)}
+.sqres .hit:hover{border-color:var(--lime)}.sqres .hit span{color:var(--dim);font-size:12.5px}
+.sh-manage{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.sh-manage .numin{width:70px}.sh-manage .fee{width:84px}.sh-manage .inl{display:flex;align-items:center;gap:10px}.sh-manage .sellbox{display:inline-flex;gap:8px;align-items:center}
+.sh-manage .chk{display:flex;gap:8px;align-items:center;color:var(--dim)}
+.tm-right{position:sticky;top:78px}
+@media (max-width:1250px){.tm-right{position:static}}
+.tm-pitch{aspect-ratio:1/.88}
+.split.squad .pitch{max-width:300px;display:block;margin:0 auto}
