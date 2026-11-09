@@ -384,3 +384,5 @@ main{width:100%;max-width:1240px;margin:0;padding:6px 30px 110px}
 @media (max-width:1250px){.tm{grid-template-columns:1fr}}
 .sh-ps .ps-t{position:absolute;inset:0;display:grid;place-items:center;font:700 11px var(--bd);font-style:normal;color:#fff;pointer-events:none}
 .sh-psn{margin:12px 0 0;font-size:12px;color:var(--dim)}
+.sh-ps .ps-g{position:absolute;width:58%;height:58%;left:21%;top:21%;color:#fff;pointer-events:none;overflow:visible}
+.sh-ps .on.pl .ps-g{color:var(--lime)}.ps-g .pp{stroke:var(--lime)}
