@@ -931,7 +931,7 @@
         p.value = Math.round(Math.pow(1.35, p.ovr - 60) * 0.35) * 1e6; p.wage = Math.round(Math.pow(1.3, p.ovr - 60) * 2) * 1e3;
         p.release = p.value * 2; p.contractEnd = 2026 + Math.floor(rnd() * 6);
         if (rnd() < 0.06) { p.free = true; p.contractEnd = null; p.club = ''; }
-        if (rnd() < 0.3) p.playstyles = [pick(['tikitaka', 'pressproven', 'intercept', 'quickstep', 'rapid', 'technical', 'clinicalfinisher', 'incisivepass'])];
+        if (rnd() < 0.3) p.playstyles = [pick(['tikitaka', 'pressproven', 'intercept', 'quickstep', 'rapid', 'technical', 'finesseshot', 'incisivepass'])];
         out.push(p);
       }
     });
