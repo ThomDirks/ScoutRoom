@@ -268,20 +268,33 @@
 
   const tabs = [['home', 'Briefing'], ['market', 'Market'], ['squad', 'Squad'], ['club', 'Club'], ['lore', 'Club DNA'], ['watch', 'Shortlist'], ['data', 'Data']];
 
+  const TAB_NOTE = { home: 'Your weekly briefing', market: 'Every player, scored', squad: 'Who you have now', club: 'Results and window log', lore: 'Club identity and feeders', watch: 'Targets you are tracking', data: 'Load and back up' };
+  const MARK = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="14" cy="14" r="8"/><path d="M20 20 L28 28"/><path d="M14 9 V19 M9 14 H19" stroke-width="1.8"/></svg>';
   function renderHeader() {
     const c = career(); const prof = getProfile(c.clubId); const ctx = buildCtx();
     const sync = cloud.status === 'synced' ? ['synced', 'Saved to your account'] : (cloud.status === 'checking' ? ['', 'Checking save'] : ['local', 'Saved in this browser']);
+    const cur = tabs.find(([k]) => k === S.ui.tab) || tabs[0];
+    const badge = k => k === 'squad' ? (c.squad.length || '') : k === 'watch' ? (c.watchlist.length || '') : '';
+    $('#rail').innerHTML = `
+      <a class="r-brand" href="#home" data-act="tab" data-v="home" aria-label="Scout Room, briefing"><span class="mark" aria-hidden="true">${MARK}</span></a>
+      <nav class="menu" aria-label="Sections">${tabs.map(([k, l]) => `<a href="#${k}" class="${S.ui.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}" ${S.ui.tab === k ? 'aria-current="page"' : ''}><span class="m-l">${l}</span>${badge(k) !== '' ? `<i class="m-n">${badge(k)}</i>` : ''}</a>`).join('')}</nav>
+      <p class="r-foot"><span class="sync ${sync[0]}" title="${sync[1]}"></span>${sync[1]}</p>`;
     $('#hdr').innerHTML = `
       <div class="bar-in">
-        <a class="brand" href="#home" data-act="tab" data-v="home"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="14" cy="14" r="8"/><path d="M20 20 L28 28"/><path d="M14 9 V19 M9 14 H19" stroke-width="1.8"/></svg></span><span class="bn">Scout<em>Room</em><small>Recruitment office</small></span></a>
-        <nav class="tabs" aria-label="Sections">${tabs.map(([k, l]) => `<a href="#${k}" class="${S.ui.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</a>`).join('')}</nav>
+        <span class="crumb"><b>Scout Room</b><i></i><span class="here">${esc(cur[1])}</span><em>${esc(TAB_NOTE[cur[0]] || '')}</em></span>
         <div class="vitals">
           <span class="vit"><em>${esc(c.now.type)} ${c.now.year}</em><strong>${esc(prof ? prof.name : 'Pick a club')}</strong></span>
           <span class="vit pull"><em>Pull</em><strong>${ctx.pull}</strong></span>
           ${DEMO ? '<span class="vit demo"><em>Data</em><strong>Demo</strong></span>' : `<span class="vit"><em>Players</em><strong>${DB.length.toLocaleString()}</strong></span>`}
-          <span class="sync ${sync[0]}" title="${sync[1]}"></span>
         </div>
       </div>`;
+    $('#hints').innerHTML = `
+      <span class="key"><kbd>Click</kbd>Open player</span>
+      <span class="key"><kbd>Esc</kbd>Close card</span>
+      <span class="gap"></span>
+      <a class="key act" href="#squad" data-act="tab" data-v="squad"><kbd>Squad</kbd>Update my players</a>
+      <a class="key act" href="#market" data-act="tab" data-v="market"><kbd>Market</kbd>Find a signing</a>
+      <a class="key act" href="#data" data-act="tab" data-v="data"><kbd>Data</kbd>Load scan</a>`;
   }
 
   /* ----------------------------------------------------------------- Home */
@@ -359,7 +372,7 @@
           <div class="tile"><em>Wage cap</em><b>€${c.wageCap}K</b><small>a week</small></div>
           <div class="tile"><em>Pool</em><b>${DB.length.toLocaleString()}</b><small>players</small></div>
         </div>
-        <div class="row gap wrap"><a class="btn primary" href="#market" data-act="tab" data-v="market">Open the market</a><a class="btn" href="#club" data-act="tab" data-v="club">Log this window</a></div>
+        <div class="row gap wrap"><a class="btn primary go" href="#market" data-act="tab" data-v="market"><i class="ic">&#8594;</i>Open the market</a><a class="btn" href="#club" data-act="tab" data-v="club">Log this window</a></div>
         ${gaps.length ? `<h3 class="mini-h">Biggest upgrades on offer</h3><ul class="gaps">${gaps.map(g => `<li data-act="open" data-v="${esc(g.x.p.key)}" tabindex="0"><b>${g.s.pos}</b><span>${esc(g.x.p.name)}</span><em>+${g.d} OVR</em></li>`).join('')}</ul>` : `<p class="hint">Enter your starters on the Squad tab and the biggest upgrades show up here.</p>`}
       </div>
       <div class="hero-r"><p class="eyebrow">Best realistic lineup · ${esc(formation().label)}</p>${pitchSVG(xi, null)}<p class="hint center">${filled} of ${slots.length} slots filled from players who would sign.${lvl != null ? ` Only players rated ${Math.round(lvl - BAND_LO)} to ${Math.round(lvl + BAND_HI)}, around your team level of ${Math.round(lvl)}.` : ''}</p></div>
