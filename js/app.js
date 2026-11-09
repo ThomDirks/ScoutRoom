@@ -837,26 +837,29 @@
       if (first.cols.length < 30 && !confirm('Scout Room: this list only shows ' + first.cols.length + ' columns, and none of the player attributes (passing, pace, defending and so on). Without them I can not score system fit.\n\nPress Cancel, then on SoFIFA open the Columns menu, tick every attribute group (plus PlayStyles, Value, Wage and Release clause), let the page reload, and run this again.\n\nPress OK only if you want to read the list anyway.')) { say('stopped. Switch the attribute columns on first (Columns menu), then run it again.'); setTimeout(() => box.remove(), 15000); return; }
       const asked = prompt('How many pages should I read? Each page has ' + first.lines.length + ' players. Type 0 to read the whole list.', '10');
       if (asked === null) { box.remove(); return; }
-      const maxPages = +asked > 0 ? +asked : 400;
+      const step = first.lines.length; const base = new URL(location.href); const start = +(base.searchParams.get('offset') || 0);
+      const tm = (document.body.innerText || '').match(/[\d,]+\s*[-\u2013]\s*[\d,]+\s+of\s+([\d,]+)/i); const total = tm ? +tm[1].replace(/,/g, '') : 0;
+      const maxPages = +asked > 0 ? +asked : (total ? Math.ceil((total - start) / step) : 500);
       const idCol = first.cols.indexOf('ID'); const seen = new Set(); const all = [];
       const add = r => { r.lines.forEach(l => { const id = idCol >= 0 ? l[idCol] : l.join('|'); if (!seen.has(id)) { seen.add(id); all.push(l); } }); };
-      add(first);
-      const step = first.lines.length; const base = new URL(location.href); const start = +(base.searchParams.get('offset') || 0);
+      add(first); let empty = 0;
       for (let p = 1; p < maxPages; p++) {
-        say('reading page ' + (p + 1) + ' of ' + (maxPages === 400 ? 'all' : maxPages) + '. ' + all.length + ' players so far. Keep this tab open.');
+        say('reading page ' + (p + 1) + ' of ' + maxPages + '. ' + all.length.toLocaleString() + (total ? ' of ' + total.toLocaleString() : '') + ' players so far. Keep this tab open.');
         await sleep(3000 + Math.random() * 3000);
         base.searchParams.set('offset', start + p * step);
-        let res; try { res = await fetch(base.href, { credentials: 'include' }); } catch (e) { say('the network stopped me on page ' + (p + 1) + '. Saving what I have.'); break; }
-        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-        const r = extract(doc);
-        if (!r || !r.lines.length) { say('page ' + (p + 1) + ' had no players (end of list, or SoFIFA asked for a check). Saving what I have.'); await sleep(1500); break; }
-        const before = all.length; add(r); if (all.length === before) break;
+        let r = null;
+        for (let tries = 0; tries < 3 && !(r && r.lines.length); tries++) {
+          if (tries) await sleep(8000);
+          try { const res = await fetch(base.href, { credentials: 'include' }); r = extract(new DOMParser().parseFromString(await res.text(), 'text/html')); } catch (e) { r = null; }
+        }
+        if (!r || !r.lines.length) { empty++; if (empty >= 3) { say('three pages in a row came back empty (SoFIFA may want a check). Saving what I have.'); await sleep(2000); break; } continue; }
+        empty = 0; add(r);
       }
       const text = [first.cols.join('\t'), ...all.map(l => l.join('\t'))].join('\n');
       const url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/tab-separated-values;charset=utf-8' }));
       const a = document.createElement('a'); a.href = url; a.download = 'scout_room_players.tsv'; document.body.appendChild(a); a.click(); a.remove();
       try { await navigator.clipboard.writeText(text); } catch (e) { /* download is enough */ }
-      say('done, ' + all.length + ' players saved as scout_room_players.tsv in your Downloads. Upload it in Scout Room (Data tab).');
+      say('done, ' + all.length.toLocaleString() + (total ? ' of ' + total.toLocaleString() : '') + ' players saved as scout_room_players.tsv in your Downloads.' + (total && all.length < total * 0.97 ? ' That is fewer than SoFIFA lists, so some are missing. Send me this file anyway, scans can be merged.' : ' That is the full list.'));
       setTimeout(() => box.remove(), 20000);
     })();
   }
