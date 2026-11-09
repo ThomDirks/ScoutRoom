@@ -129,7 +129,7 @@
     const k = E.norm(name); if (!k) return null;
     if (!clubCache) clubCache = new Map();
     if (clubCache.has(k)) return clubCache.get(k);
-    const ps = allProfiles(); let hit = ps.find(p => E.norm(p.name) === k);
+    const ps = allProfiles(); let hit = ps.find(p => E.norm(p.name) === k) || ps.find(p => E.sameClub(p.name, name));
     if (!hit) {
       const cands = ps.filter(p => { const pk = E.norm(p.name); return pk.length >= 6 && (k.includes(pk) || (k.length >= 6 && pk.includes(k))); });
       cands.sort((a, b) => E.norm(b.name).length - E.norm(a.name).length); hit = cands[0] || null;
@@ -218,7 +218,7 @@
       if (v.length >= 5) return Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10;
       if (ctx.pullInfo && ctx.pullInfo.teamOvr) return ctx.pullInfo.teamOvr;
       const k = ctx.profile ? E.norm(ctx.profile.name) : '';
-      if (k) { const top = DB.filter(p => !p.demo && p.ovr != null && E.norm(p.club) === k).map(p => p.ovr).sort((x, y) => y - x).slice(0, 14); if (top.length >= 11) return Math.round(top.reduce((x, y) => x + y, 0) / top.length * 10) / 10; }
+      if (k) { const top = DB.filter(p => !p.demo && p.ovr != null && E.sameClub(p.club, ctx.profile.name)).map(p => p.ovr).sort((x, y) => y - x).slice(0, 14); if (top.length >= 11) return Math.round(top.reduce((x, y) => x + y, 0) / top.length * 10) / 10; }
       return null;
     });
   }
@@ -964,7 +964,7 @@
     if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; save(); return renderView(); }
     if (act === 'sq-club') {
       const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
-      DB.forEach(p => { if (!p.demo && k && E.norm(p.club) === k && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
+      DB.forEach(p => { if (!p.demo && k && E.sameClub(p.club, prof.name) && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
       save(); renderView(); return flash($('#sq-msg'), n ? 'Added ' + n + ' players.' : 'No players with that club name in your data. Add them by name instead.');
     }
     if (act === 'sq-clear') { c.squad = []; save(); return renderView(); }

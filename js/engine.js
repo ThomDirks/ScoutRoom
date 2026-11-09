@@ -2,6 +2,15 @@
 const Engine = (() => {
   const clamp = (x, a = 0, b = 100) => Math.max(a, Math.min(b, x));
   const norm = s => String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  /* Club names differ between SoFIFA ("SSC Napoli", "1. FSV Mainz 05") and our profiles ("Napoli"). Compare on a stripped key. */
+  const CLUB_NOISE = new Set(['fc', 'afc', 'cf', 'sc', 'ssc', 'ss', 'as', 'ac', 'us', 'sv', 'vfb', 'vfl', 'fsv', 'tsg', 'rb', 'bc', 'calcio', 'club', '1', '1899', 'de', 'cd', 'ud', 'cfc']);
+  const CLUB_ALIAS = { intermilan: 'inter', internazionale: 'inter', bayernmunchen: 'bayern', bayernmunich: 'bayern', hoffenheim: 'hoffenheim', manchesterutd: 'manchesterunited', manutd: 'manchesterunited', spurs: 'tottenhamhotspur', wolves: 'wolverhamptonwanderers', newcastle: 'newcastleunited', westham: 'westhamunited', brighton: 'brightonhovealbion', leeds: 'leedsunited', leicester: 'leicestercity', norwich: 'norwichcity', borussiamgladbach: 'monchengladbach', borussiamonchengladbach: 'monchengladbach', bmgladbach: 'monchengladbach', eintrachtfrankfurt: 'frankfurt', bayerleverkusen: 'leverkusen', bayer04leverkusen: 'leverkusen' };
+  const clubKey = s => {
+    const w = String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+    const kept = w.filter(t => !CLUB_NOISE.has(t)); const k = (kept.length ? kept : w).join('');
+    return CLUB_ALIAS[k] || k;
+  };
+  const sameClub = (a, b) => { const x = clubKey(a); return !!x && x === clubKey(b); };
   const avg = a => { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
 
   /* ---------- field aliases for SoFIFA / Kaggle style headers ---------- */
@@ -441,6 +450,6 @@ const Engine = (() => {
     return { slot: slot.id, fit: f.fit, fitInfo: f, will: w.will, willInfo: w, lore: l.lore, loreInfo: l, total };
   }
 
-  return { clamp, norm, money, fmtMoney, contractInfo, parseTable, parsePositions, ROLE, FORMATIONS, POSITIONS, GROUPS, posSlot, roleOf, sideOf, slotFit, posFactor, clubPull, willingness, lore, evaluate, formOne, ATTR_KEYS, FACE_KEYS, ALIASES, natKey };
+  return { clamp, norm, clubKey, sameClub, money, fmtMoney, contractInfo, parseTable, parsePositions, ROLE, FORMATIONS, POSITIONS, GROUPS, posSlot, roleOf, sideOf, slotFit, posFactor, clubPull, willingness, lore, evaluate, formOne, ATTR_KEYS, FACE_KEYS, ALIASES, natKey };
 })();
 if (typeof module !== 'undefined') module.exports = Engine;
