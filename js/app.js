@@ -12,18 +12,19 @@
   const defaultCareer = () => ({
     id: uid(), name: 'My career', clubId: 'brighton-hove-albion', now: { type: 'Summer', year: 2026 },
     formation: '3-2-3-2', budget: 60, wageCap: 150, markup: 1.2, realism: 0.8,
-    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], sold: [], bought: [], out: [], windows: [], watchlist: [],
+    weights: { fit: 50, will: 30, lore: 20 }, incumbents: {}, squad: [], sold: [], bought: [], out: [], numbers: {}, windows: [], watchlist: [],
   });
   function defaults() {
     const c = defaultCareer();
-    return { v: 2, savedAt: 0, careers: [c], activeId: c.id, customProfiles: {}, hidden: [], ui: { f3: 1, tab: 'home', pos: 'LINEUP', sort: 'total', q: '', minOvr: 70, minPot: 0, maxPrice: 0, nat: '', contract: 'any', maxAge: 40, hideUnlikely: false, oop: false, affordable: false, limit: 48, view: 'list', drawer: null, squadSlot: null, loreId: null, loreQ: '' } };
+    return { v: 2, savedAt: 0, careers: [c], activeId: c.id, customProfiles: {}, numberNotes: {}, hidden: [], ui: { f3: 1, tab: 'home', pos: 'LINEUP', sort: 'total', q: '', minOvr: 70, minPot: 0, maxPrice: 0, nat: '', contract: 'any', maxAge: 40, hideUnlikely: false, oop: false, affordable: false, limit: 48, view: 'list', drawer: null, squadSlot: null, loreId: null, loreQ: '' } };
   }
   function adopt(o) {
     const d = defaults(); const s = Object.assign(d, o, { ui: Object.assign(d.ui, o.ui || {}) });
     if (s.ui.tab === 'targets') s.ui.tab = 'market';
     if (!s.ui.pos || s.ui.pos === 'ALL') s.ui.pos = 'LINEUP';
     if (!s.ui.f3) { s.ui.f3 = 1; s.ui.minOvr = 70; }
-    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; if (!c.sold) c.sold = []; if (!c.bought) c.bought = []; if (!c.out) c.out = []; });
+    s.careers.forEach(c => { if (!E.FORMATIONS[c.formation]) c.formation = '3-2-3-2'; if (!c.squad) c.squad = []; if (!c.sold) c.sold = []; if (!c.bought) c.bought = []; if (!c.out) c.out = []; if (!c.numbers) c.numbers = {}; });
+    if (!s.numberNotes) s.numberNotes = {};
     return s;
   }
   let S = defaults();
@@ -209,7 +210,7 @@
   /* --------------------------------------------------------- shared bits */
   const ISO3 = { england: 'ENG', france: 'FRA', germany: 'GER', spain: 'ESP', italy: 'ITA', portugal: 'POR', netherlands: 'NED', belgium: 'BEL', brazil: 'BRA', argentina: 'ARG', norway: 'NOR', sweden: 'SWE', denmark: 'DEN', switzerland: 'SUI', austria: 'AUT', croatia: 'CRO', serbia: 'SRB', poland: 'POL', turkey: 'TUR', uruguay: 'URU', colombia: 'COL', ecuador: 'ECU', mexico: 'MEX', usa: 'USA', canada: 'CAN', japan: 'JPN', southkorea: 'KOR', morocco: 'MAR', senegal: 'SEN', nigeria: 'NGA', ghana: 'GHA', ivorycoast: 'CIV', egypt: 'EGY', cameroon: 'CMR', algeria: 'ALG', scotland: 'SCO', wales: 'WAL', ireland: 'IRL', republicofireland: 'IRL', czechrepublic: 'CZE', ukraine: 'UKR', hungary: 'HUN', slovenia: 'SVN', slovakia: 'SVK', greece: 'GRE', finland: 'FIN', iceland: 'ISL', paraguay: 'PAR', chile: 'CHI', peru: 'PER', venezuela: 'VEN', australia: 'AUS', georgia: 'GEO', albania: 'ALB', kosovo: 'KOS', romania: 'ROU', bulgaria: 'BUL', mali: 'MLI', guinea: 'GUI', tunisia: 'TUN', drcongo: 'COD', northernireland: 'NIR', bosniaandherzegovina: 'BIH', northmacedonia: 'MKD', montenegro: 'MNE', israel: 'ISR', jamaica: 'JAM', iran: 'IRN', china: 'CHN', saudiarabia: 'KSA', uzbekistan: 'UZB', armenia: 'ARM' };
   const nat3 = n => n ? (ISO3[E.natKey(n)] || n.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) : '';
-  /* Black ('elite') is a scout pick: better than the squad average, fits the system, fits the club. Everything else is coloured by overall. */
+  /* Black ('elite') is a scout pick: better than who you have in that position, fits the system, fits the club. Everything else is coloured by overall. */
   const PICK_FIT = 70, PICK_LORE = 45;
   function squadAvg() {
     return cached('avg', () => {
@@ -218,7 +219,12 @@
       return ctx.pullInfo && ctx.pullInfo.teamOvr ? ctx.pullInfo.teamOvr : null;
     });
   }
-  const isPick = (p, e) => { const a = squadAvg(); return a != null && p.ovr > a && e.fit >= PICK_FIT && e.lore >= PICK_LORE; };
+  /* better than whoever you have in that position now (or the squad average when the slot is open) */
+  const isPick = (p, e) => {
+    if (e.fit < PICK_FIT || e.lore < PICK_LORE) return false;
+    let inc = buildCtx().incumbentFor(slotAny(e.slot)); if (inc == null) inc = squadAvg();
+    return inc != null && p.ovr > inc;
+  };
   const tierOf = (o, pick) => pick ? 'elite' : o >= 78 ? 'gold' : o >= 70 ? 'silver' : 'bronze';
   const initials = n => n.replace(/^Demo\s+/, '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const shortName = n => { if (n.length <= 15) return n; const w = n.split(/\s+/); return w.length > 1 ? w[0][0] + '. ' + w.slice(1).join(' ') : n; };
@@ -332,7 +338,7 @@
       <span class="lab sp">Age</span>
       ${[[40, 'Any'], [30, 'Under 31'], [25, 'Under 26'], [21, 'Under 22']].map(([n, l]) => `<button class="pill ${u.maxAge === n ? 'on' : ''}" data-act="age" data-v="${n}">${l}</button>`).join('')}
       <a class="link" href="#market" data-act="tab" data-v="market">More filters</a>
-      <span class="hint legend"><i class="dot"></i>${squadAvg() != null ? `Black card: better than your squad average (${squadAvg()}), fit ${PICK_FIT}+, lore ${PICK_LORE}+.` : 'Black cards show up once you add your players or log a window with your team OVR.'}</span>
+      <span class="hint legend"><i class="dot"></i>${squadAvg() != null ? `Black card: better than your current player in that position, fit ${PICK_FIT}+, lore ${PICK_LORE}+.` : 'Black cards show up once you add your players or log a window with your team OVR.'}</span>
       ${own.length ? `<span class="hint">Your ${own.length} players are left out.</span>` : ''}
     </section>
     <section class="hero">
@@ -418,6 +424,18 @@
   }
 
   /* --------------------------------------------------------------- Drawer */
+  function numberBox(p) {
+    const cur = numOf(p.key); const rec = recommendNumbers(p); const notes = numNotes(p);
+    const tm = 'https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=' + encodeURIComponent(p.name);
+    return `<section class="numbox"><h3>Squad number</h3>
+      <div class="row gap wrap numrow">${cur ? `<span class="shirt big">${cur}</span><button class="link" data-act="num-clear" data-v="${esc(p.key)}">Free it up</button>` : '<span class="hint">No number yet.</span>'}</div>
+      <div class="row wrap gap">${rec.out.map(r => `<button class="numchip" data-act="num-pick" data-v="${esc(p.key)}|${r.n}" title="${WHY[r.why]}"><b>${r.n}</b><i>${WHY[r.why]}</i></button>`).join('')}</div>
+      ${rec.blocked.length ? `<p class="hint">Wanted but taken: ${rec.blocked.map(b => '<b>' + b.n + '</b> (' + esc(nameOfKey(b.by)) + ')').join(', ')}.</p>` : ''}
+      <div class="row gap wrap numform"><label>Give him a number<input id="dr-num" type="number" min="1" max="99" placeholder="1 to 99" value=""></label><button class="btn" data-act="num-set" data-v="${esc(p.key)}">Give number</button>
+        <label class="grow">Numbers he has worn <span class="hint">from Transfermarkt</span><input id="dr-notes" data-v="${esc(p.key)}" value="${esc(notes.join(', '))}" placeholder="e.g. 10, 7, 21"></label></div>
+      <p class="hint"><a class="link" href="${tm}" target="_blank" rel="noopener">Look him up on Transfermarkt</a>, then type the numbers he wore above (most worn first). The three suggestions use those, skip anything your squad already has, and fall back to the usual numbers for his position.</p>
+      <div id="num-msg" class="hint"></div></section>`;
+  }
   function renderDrawer() {
     const d = $('#drawer'); const dr = S.ui.drawer;
     if (!dr) { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); d.innerHTML = ''; return; }
@@ -443,6 +461,7 @@
           <button class="btn" data-act="own" data-v="${esc(p.key)}">${career().squad.includes(p.key) ? 'Remove from my squad' : 'He is in my squad'}</button>
           <label class="inl">Judge as<select id="dr-pos">${[['LINEUP', 'Best slot in my lineup'], ['ANY', 'Best of any position'], ...E.POSITIONS.map(x => [x, x])].map(([k, l]) => `<option value="${k}" ${pos === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
         ${career().squad.includes(p.key) ? '' : `<div class="signbox"><label>Signed for (€M)<input id="dr-fee" type="number" min="0" step="0.5" value="${p.free ? 0 : Math.round((ev.willInfo.price || 0) / 1e5) / 10}"></label><button class="btn primary" data-act="sign" data-v="${esc(p.key)}">I signed him</button></div>`}
+        ${numberBox(p)}
         <div class="trio">
           <div><em>System fit</em><b>${ev.fit}</b></div><div><em>Signing</em><b class="${willClass(ev.willInfo.label)}">${ev.will}</b><small>${ev.willInfo.label}</small></div><div><em>Lore</em><b>${ev.lore}</b></div><div class="tot"><em>Total</em><b>${ev.total}</b></div>
         </div>
@@ -490,13 +509,39 @@
       <p class="hint">Add the players you already have. Their ratings set who you need to beat at each position, and they are left out of the targets.</p>
       <div class="row gap wrap between"><label class="grow">Add a player by name or club<input id="sq-q" type="search" value="${esc(S.ui.sqQ || '')}" placeholder="Start typing a name"></label>
         <div class="row gap wrap bottomrow"><button class="btn" data-act="sq-club">Add everyone from ${esc((getProfile(c.clubId) || {}).name || 'my club')}</button><button class="btn" data-act="sq-clear" ${own.length ? '' : 'disabled'}>Clear list</button></div></div>
-      <div id="sq-msg" class="hint"></div><div id="sq-res" class="sqres">${sqResults(hits)}</div>
-      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th>Injured</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
-        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td><input type="checkbox" class="outbox" data-act="out" data-v="${esc(p.key)}" ${c.out.includes(p.key) ? 'checked' : ''} aria-label="${esc(p.name)} is injured or suspended"></td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
+      <div id="sq-msg" class="hint"></div>
+      ${Object.keys(c.numbers).length ? `<div class="numstrip">${Object.entries(c.numbers).sort((a, b) => a[1] - b[1]).map(([k, n]) => `<span class="shirt ${c.squad.includes(k) ? '' : 'res'}" title="${esc(nameOfKey(k))}${c.squad.includes(k) ? '' : ' (reserved)'}"><b>${n}</b>${esc(nameOfKey(k).split(' ').slice(-1)[0])}</span>`).join('')}</div>` : ''}<div id="sq-res" class="sqres">${sqResults(hits)}</div>
+      ${own.length ? `<p class="hint">Sell adds the price to your budget and moves him to the sold list, so he is not suggested as a target. Remove only takes him off this list.</p><div class="tablewrap"><table class="tbl small"><thead><tr><th>Player</th><th>Positions</th><th class="num">OVR</th><th class="num">POT</th><th>Plays as</th><th class="num">No.</th><th>Injured</th><th>Sell for (€M)</th><th></th></tr></thead><tbody>
+        ${own.slice().sort((a, b) => b.ovr - a.ovr).map(p => `<tr><td class="clk" data-act="open" data-v="${esc(p.key)}" tabindex="0"><div class="pname">${esc(p.name)}</div><div class="psub">age ${p.age ?? '?'}</div></td><td>${esc(p.positions.join(' · '))}</td><td class="num"><b>${p.ovr}</b></td><td class="num">${p.pot ?? '-'}</td><td>${slotOf(p)}</td><td class="num"><input class="numin" type="number" min="1" max="99" data-numfor="${esc(p.key)}" value="${numOf(p.key) || ''}" aria-label="Squad number for ${esc(p.name)}"></td><td><input type="checkbox" class="outbox" data-act="out" data-v="${esc(p.key)}" ${c.out.includes(p.key) ? 'checked' : ''} aria-label="${esc(p.name)} is injured or suspended"></td><td><div class="sellbox"><input class="fee" type="number" min="0" step="0.5" data-fee="${esc(p.key)}" value="${p.value ? Math.round(p.value / 1e5) / 10 : ''}" aria-label="Sale price in millions for ${esc(p.name)}"><button class="btn" data-act="sq-sell" data-v="${esc(p.key)}">Sell</button></div></td><td><button class="link" data-act="sq-rm" data-v="${esc(p.key)}" title="Only take him off this list, no money">Remove</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">Nobody added yet.</p>'}
       ${(c.sold || []).length ? `<h3>Sold</h3><ul class="soldlist">${c.sold.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="sq-undo" data-v="${esc(x.key)}">Undo</button><button class="link" data-act="sq-forget" data-v="${esc(x.key)}" title="Keep the sale but allow him as a target again">Allow as target</button></li>`).join('')}</ul>` : ''}
       ${(c.bought || []).length ? `<h3>Signed</h3><ul class="soldlist">${c.bought.slice().reverse().map(x => `<li><b>${esc(x.name)}</b><span>${x.ovr || ''} OVR · €${x.fee}M · ${esc(x.when)}</span><button class="link" data-act="buy-undo" data-v="${esc(x.key)}">Undo</button><span></span></li>`).join('')}</ul>` : ''}</section>
     ${coverPanel()}`;
   }
+  /* ---- squad numbers ---- */
+  const NUM_CONV = { GK: [1, 13, 12, 22, 25, 31], RB: [2, 12, 22, 20, 23, 27], LB: [3, 15, 23, 18, 21, 26], RWB: [2, 12, 17, 22, 27], LWB: [3, 15, 18, 23, 26], CB: [4, 5, 6, 15, 16, 24, 33], CDM: [6, 8, 4, 14, 16, 18], CM: [8, 14, 6, 16, 20, 17], CAM: [10, 8, 21, 17, 11, 20], RM: [7, 17, 11, 25, 21], LM: [11, 17, 19, 27, 21], RW: [7, 11, 17, 21, 25], LW: [11, 10, 19, 17, 21], CF: [9, 10, 19, 20, 29], ST: [9, 19, 29, 18, 14, 20] };
+  let NUMFILE = {};
+  const parseNums = txt => [...new Set((String(txt || '').match(/\d+/g) || []).map(Number).filter(n => n >= 1 && n <= 99))];
+  const numNotes = p => S.numberNotes[p.key] || NUMFILE[E.norm(p.name)] || [];
+  const takenMap = exceptKey => { const m = new Map(); Object.entries(career().numbers || {}).forEach(([k, n]) => { if (k !== exceptKey) m.set(n, k); }); return m; };
+  const nameOfKey = k => { const p = byKey(k); return p ? p.name : 'someone'; };
+  function recommendNumbers(p) {
+    const taken = takenMap(p.key); const out = []; const blocked = []; const seen = new Set();
+    const add = (n, why) => { n = +n; if (!n || n < 1 || n > 99 || seen.has(n)) return; seen.add(n); if (taken.has(n)) { if (why !== 'usual' && why !== 'free') blocked.push({ n, by: taken.get(n) }); return; } if (out.length < 3) out.push({ n, why }); };
+    numNotes(p).forEach(n => add(n, 'wore'));
+    if (p.kit) add(p.kit, 'wears');
+    (NUM_CONV[p.positions[0]] || []).forEach(n => add(n, 'usual'));
+    for (let n = 2; n < 40 && out.length < 3; n++) add(n, 'free');
+    return { out, blocked };
+  }
+  const WHY = { wore: 'wore it before', wears: 'wears it now', usual: 'usual for the position', free: 'free' };
+  function setNumber(key, n) {
+    const c = career(); if (!n) { delete c.numbers[key]; return { ok: true }; }
+    if (n < 1 || n > 99) return { ok: false, msg: 'Pick a number from 1 to 99.' };
+    const by = takenMap(key).get(n); if (by) return { ok: false, msg: 'Number ' + n + ' is already ' + nameOfKey(by) + "'s." };
+    c.numbers[key] = n; return { ok: true };
+  }
+  const numOf = k => (career().numbers || {})[k];
+
   /* Best XI from my own players. Injured ones are skipped. */
   function ownXI(excludeOut) {
     const c = career(); const slots = formation().slots; const ctx = buildCtx(); const out = new Set(excludeOut ? c.out : []);
@@ -752,6 +797,10 @@
       <details class="alt"><summary>See the script before you run it</summary>
         <div class="code"><pre>${esc(SNIPPET)}</pre></div></details>
     </section>
+    <section class="panel"><h2>Numbers players have worn</h2>
+      <p class="hint">Optional. One player per line, the name then the numbers, most worn first. For example <code>Erling Haaland; 9, 17</code>. These feed the squad number suggestions. You can also type them on a player's page.</p>
+      <textarea id="num-paste" rows="4" placeholder="Name; 10, 7, 21"></textarea>
+      <div class="row gap wrap"><button class="btn" data-act="num-import">Add these numbers</button><span id="num-msg2" class="hint"></span></div></section>
     <div class="split">
       <section class="panel"><h2>Your player data</h2>
         <p>${DEMO ? 'Demo players only. Load a scan to replace them.' : `${real.toLocaleString()} players stored in this browser.`}</p>
@@ -868,6 +917,15 @@
     if (act === 'age') { S.ui.maxAge = +v; save(); return renderView(); }
     if (act === 'own') { const i = c.squad.indexOf(v); if (i >= 0) c.squad.splice(i, 1); else c.squad.push(v); save(); renderView(); return renderDrawer(); }
     if (act === 'sq-add') { if (!c.squad.includes(v)) c.squad.push(v); S.ui.sqQ = ''; save(); return renderView(); }
+    if (act === 'num-pick') { const [k, n] = v.split('|'); const r = setNumber(k, +n); if (!r.ok) return flash($('#num-msg'), r.msg); save(); renderView(); return renderDrawer(); }
+    if (act === 'num-set') { const n = +($('#dr-num').value || 0); if (!n) return flash($('#num-msg'), 'Type a number first.'); const r = setNumber(v, n); if (!r.ok) return flash($('#num-msg'), r.msg); save(); renderView(); return renderDrawer(); }
+    if (act === 'num-clear') { delete c.numbers[v]; save(); renderView(); return renderDrawer(); }
+    if (act === 'num-import') {
+      const lines = $('#num-paste').value.split('\n').map(l => l.trim()).filter(Boolean); let hit = 0, miss = 0;
+      const byName = new Map(); DB.forEach(p => { const k = E.norm(p.name); if (!byName.has(k)) byName.set(k, []); byName.get(k).push(p); });
+      lines.forEach(l => { const m = l.split(/[;\t|]/); const nm = E.norm(m[0]); const nums = parseNums(m.slice(1).join(' ')); const ps = byName.get(nm); if (ps && nums.length) { ps.forEach(p => { S.numberNotes[p.key] = nums; }); hit++; } else miss++; });
+      save(); return flash($('#num-msg2'), hit + ' players updated' + (miss ? ', ' + miss + ' lines did not match a player name.' : '.'));
+    }
     if (act === 'sign') {
       const p = byKey(v) || (c.watchlist.find(w => w.key === v) || {}).snap; if (!p) return;
       const inp = document.querySelector('#dr-fee'); const fee = inp && inp.value !== '' ? +inp.value : 0;
@@ -880,14 +938,14 @@
     }
     if (act === 'buy-undo') {
       const i = c.bought.findIndex(x => x.key === v); if (i < 0) return; const x = c.bought.splice(i, 1)[0];
-      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); c.budget = Math.round((c.budget + (x.fee || 0)) * 10) / 10;
+      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; c.budget = Math.round((c.budget + (x.fee || 0)) * 10) / 10;
       const w = c.watchlist.find(y => y.key === v); if (w && w.status === 'Bought') w.status = 'Target'; save(); return renderAll();
     }
     if (act === 'out-clear') { c.out = []; save(); return renderView(); }
     if (act === 'sq-sell') {
       const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = byKey(v);
       const fee = inp && inp.value !== '' ? +inp.value : (p && p.value ? Math.round(p.value / 1e5) / 10 : 0);
-      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); c.sold = c.sold || [];
+      c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; c.sold = c.sold || [];
       c.sold.push({ key: v, name: p ? p.name : v, ovr: p ? p.ovr : null, fee: fee || 0, when: c.now.type + ' ' + c.now.year });
       c.budget = Math.round((c.budget + (fee || 0)) * 10) / 10; save(); return renderAll();
     }
@@ -896,7 +954,7 @@
       if (!c.squad.includes(v)) c.squad.push(v); c.budget = Math.round((c.budget - (x.fee || 0)) * 10) / 10; save(); return renderAll();
     }
     if (act === 'sq-forget') { c.sold = c.sold.filter(x => x.key !== v); save(); return renderView(); }
-    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); save(); return renderView(); }
+    if (act === 'sq-rm') { c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); delete c.numbers[v]; save(); return renderView(); }
     if (act === 'sq-club') {
       const prof = getProfile(c.clubId); const k = prof ? E.norm(prof.name) : ''; let n = 0;
       DB.forEach(p => { if (!p.demo && k && E.norm(p.club) === k && !c.squad.includes(p.key)) { c.squad.push(p.key); n++; } });
@@ -968,6 +1026,8 @@
     const t = ev.target; const id = t.id; const c = career(); const u = S.ui;
     if (id === 'd-file') { const f = t.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => doImport(String(rd.result)); rd.readAsText(f); return; }
     if (id === 'dr-pos') { u.drawer.pos = t.value; return renderDrawer(); }
+    if (id === 'dr-notes') { S.numberNotes[t.dataset.v] = parseNums(t.value); save(); return renderDrawer(); }
+    if (t.dataset.numfor) { const r = setNumber(t.dataset.numfor, +t.value || 0); if (!r.ok) { t.value = numOf(t.dataset.numfor) || ''; return flash($('#sq-msg'), r.msg); } save(); return renderView(); }
     if (t.dataset.act === 'out') { const k = t.dataset.v; c.out = c.out.filter(x => x !== k); if (t.checked) c.out.push(k); save(); return renderView(); }
     if (t.dataset.act === 'w-status') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.status = t.value; save(); } return; }
     if (t.dataset.act === 'w-note') { const w = c.watchlist.find(x => x.key === t.dataset.v); if (w) { w.note = t.value; save(); } return; }
@@ -1025,6 +1085,7 @@
       }
     }
     if (!getProfile(career().clubId)) career().clubId = BUILTIN_CLUBS[0].id;
+    if (typeof BUNDLED === 'undefined') { try { const r = await fetch('data/numbers.json', { cache: 'no-cache' }); if (r.ok) { const j = await r.json(); Object.entries(j.names || j).forEach(([k, v]) => { NUMFILE[E.norm(k)] = Array.isArray(v) ? v.map(Number) : parseNums(v); }); } } catch (e) { /* optional file */ } }
     await loadPlayers();
     renderAll();
     initCloud();

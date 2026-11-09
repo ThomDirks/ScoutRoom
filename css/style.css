@@ -268,3 +268,14 @@ input[type=range]{padding:0;accent-color:var(--lime);height:22px}
 
 .legend{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
 .legend .dot{width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#26272d,#050507);border:1.5px solid #e9c874;transform:skewX(-10deg)}
+
+.numbox{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.numbox h3{margin:0 0 10px}
+.shirt{display:inline-flex;flex-direction:column;align-items:center;min-width:44px;padding:5px 8px;border-radius:6px;background:var(--ink2);border:1px solid var(--line2);font:600 10px/1.1 var(--mo);color:var(--dim);text-transform:uppercase}
+.shirt b{font:italic 800 22px/1 var(--hd);color:var(--lime);font-style:italic}.shirt.big{min-width:64px;padding:8px 12px}.shirt.big{font-size:0}.shirt.big{color:var(--lime);font:italic 800 38px/1 var(--hd)}
+.shirt.res{border-style:dashed;opacity:.75}
+.numchip{display:flex;flex-direction:column;align-items:center;padding:8px 14px;border-radius:6px;border:1px solid var(--line2);background:var(--ink2);cursor:pointer;transform:skewX(-8deg)}
+.numchip:hover{border-color:var(--lime)}.numchip b{font:italic 800 30px/1 var(--hd);color:var(--lime)}.numchip i{font:500 10px var(--mo);color:var(--dim);font-style:normal;text-transform:uppercase;margin-top:2px}
+.numform{align-items:flex-end;margin-top:10px}.numform label{min-width:120px}
+.numstrip{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.numin{width:64px;padding:5px 8px;text-align:right}
+.numrow{align-items:center}

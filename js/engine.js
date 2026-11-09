@@ -21,6 +21,7 @@ const Engine = (() => {
     release: ['releaseclause', 'release', 'relclause', 'buyoutclause'],
     foot: ['preferredfoot', 'foot', 'pf'],
     weak: ['weakfoot', 'wf'],
+    kit: ['kitnumber', 'jerseynumber', 'shirtnumber', 'squadnumber', 'kitno'],
     skill: ['skillmoves', 'sm', 'skills'],
     height: ['height'],
     weight: ['weight'],
@@ -72,7 +73,7 @@ const Engine = (() => {
 
   const ATTR_KEYS = ['crossing', 'finishing', 'heading', 'shortPass', 'volleys', 'dribbling', 'curve', 'fkAcc', 'longPass', 'ballControl', 'acceleration', 'sprintSpeed', 'agility', 'reactions', 'balance', 'shotPower', 'jumping', 'stamina', 'strength', 'longShots', 'aggression', 'interceptions', 'positioning', 'vision', 'penalties', 'composure', 'defAwareness', 'standTackle', 'slideTackle', 'gkDiving', 'gkHandling', 'gkKicking', 'gkPositioning', 'gkReflexes'];
   const FACE_KEYS = ['pac', 'sho', 'pas', 'drb', 'def', 'phy'];
-  const NUM_KEYS = ['age', 'ovr', 'pot', 'weak', 'skill', ...ATTR_KEYS, ...FACE_KEYS];
+  const NUM_KEYS = ['age', 'ovr', 'pot', 'weak', 'skill', 'kit', ...ATTR_KEYS, ...FACE_KEYS];
 
   const POS_TOKENS = ['GK', 'CB', 'LCB', 'RCB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'LDM', 'RDM', 'CM', 'LCM', 'RCM', 'CAM', 'LAM', 'RAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'LF', 'RF', 'ST', 'LS', 'RS'];
   const POS_FOLD = { LCB: 'CB', RCB: 'CB', LDM: 'CDM', RDM: 'CDM', LCM: 'CM', RCM: 'CM', LAM: 'CAM', RAM: 'CAM', LS: 'ST', RS: 'ST', LF: 'CF', RF: 'CF' };
@@ -180,6 +181,7 @@ const Engine = (() => {
       weak: p.weak ?? null, skill: p.skill ?? null,
       playstyles: splitList(p._playstyles).map(x => norm(x) + (/\+/.test(x) ? 'plus' : '')).concat(splitList(p._playstylesPlus).map(x => norm(x).replace(/plus$/, '') + 'plus')),
     };
+    if (p.kit != null && p.kit >= 1 && p.kit <= 99) out.kit = p.kit;
     ATTR_KEYS.concat(FACE_KEYS).forEach(k => { if (p[k] != null) out[k] = p[k]; });
     return out;
   }
@@ -210,8 +212,8 @@ const Engine = (() => {
     CDM2: { name: 'Pivot, ball-winner', w: { interceptions: 3, defAwareness: 2.5, standTackle: 2.5, stamina: 2.5, acceleration: 2.2, sprintSpeed: 2.2, shortPass: 2.5, ballControl: 2, composure: 1.8, strength: 1.5, aggression: 1, reactions: 1, longPass: 1.5, agility: 1 }, pos: { CDM: 1, CM: 0.93, CB: 0.85, CAM: 0.7, RB: 0.6, LB: 0.6 }, ps: PS_DM },
     CM: { name: 'Central midfielder', w: { shortPass: 3, longPass: 2.2, ballControl: 2.5, vision: 2.2, dribbling: 1.8, stamina: 2.2, interceptions: 1.5, standTackle: 1.2, composure: 2, reactions: 1.2, positioning: 1.2, acceleration: 1.2, agility: 1, longShots: 1, strength: 0.8 }, pos: { CM: 1, CDM: 0.94, CAM: 0.94, RM: 0.8, LM: 0.8, CB: 0.6 }, ps: PS_CM },
     CAM: { name: 'Free eight', w: { vision: 3, shortPass: 3, ballControl: 2.5, dribbling: 2.5, positioning: 2, composure: 2, finishing: 1.5, agility: 1.5, longShots: 1, curve: 0.5, reactions: 1, acceleration: 1 }, pos: { CAM: 1, CM: 0.95, CF: 0.92, RM: 0.9, LM: 0.9, RW: 0.9, LW: 0.9, CDM: 0.75, ST: 0.7 }, ps: PS_CAM },
-    RM: { name: 'Wide midfielder', w: { acceleration: 2.5, sprintSpeed: 2, dribbling: 3, agility: 1.5, ballControl: 2, crossing: 2, shortPass: 2, vision: 1, finishing: 1.5, curve: 0.5, stamina: 1.5, composure: 1, positioning: 1.5 }, pos: { RM: 1, RW: 0.96, LM: 0.88, LW: 0.85, RWB: 0.9, CAM: 0.86, RB: 0.78, CM: 0.8, ST: 0.65, CF: 0.7 }, ps: PS_WIDE },
-    RW: { name: 'Winger', w: { acceleration: 2.8, sprintSpeed: 2.6, dribbling: 3, agility: 2, ballControl: 2.2, finishing: 2, crossing: 1.5, shortPass: 1.5, vision: 1, curve: 1, positioning: 2, composure: 1.2, shotPower: 0.8, reactions: 1 }, pos: { RW: 1, RM: 0.96, LW: 0.88, LM: 0.85, CAM: 0.86, ST: 0.8, CF: 0.82, RWB: 0.75 }, ps: PS_WIDE },
+    RM: { name: 'Wide midfielder', w: { dribbling: 3.2, ballControl: 3, agility: 2.2, shortPass: 2.6, vision: 1.8, crossing: 1.6, acceleration: 1.6, sprintSpeed: 1.2, composure: 1.5, stamina: 1.5, finishing: 1.2, positioning: 1.2, curve: 1 }, pos: { RM: 1, RW: 0.96, LM: 0.88, LW: 0.85, RWB: 0.9, CAM: 0.86, RB: 0.78, CM: 0.8, ST: 0.65, CF: 0.7 }, ps: PS_WIDE },
+    RW: { name: 'Winger', w: { dribbling: 3.4, ballControl: 3.2, agility: 2.6, shortPass: 2.2, vision: 1.6, acceleration: 1.8, sprintSpeed: 1.4, finishing: 1.6, crossing: 1.2, curve: 1.2, positioning: 1.6, composure: 1.6, reactions: 1 }, pos: { RW: 1, RM: 0.96, LW: 0.88, LM: 0.85, CAM: 0.86, ST: 0.8, CF: 0.82, RWB: 0.75 }, ps: PS_WIDE },
     CF: { name: 'Second striker', w: { finishing: 2.5, positioning: 2.5, shortPass: 2.2, vision: 1.8, ballControl: 2.5, dribbling: 2.2, composure: 2, acceleration: 1.5, agility: 1.5, reactions: 1.5, longShots: 1, sprintSpeed: 1 }, pos: { CF: 1, ST: 0.97, CAM: 0.9, RW: 0.85, LW: 0.85 }, ps: PS_CAM.concat(['finesseshot', 'clinicalfinisher']) },
     ST: { name: 'Finisher', w: { finishing: 3.5, positioning: 3, composure: 2, shotPower: 1.5, reactions: 1.5, ballControl: 1.5, acceleration: 1.5, sprintSpeed: 1.5, heading: 1, strength: 1, volleys: 0.5, dribbling: 1 }, pos: { ST: 1, CF: 0.97, RW: 0.86, LW: 0.86, CAM: 0.78 }, ps: PS_ST },
     ST2: { name: 'Link striker', w: { finishing: 2.5, positioning: 2.5, composure: 2, shortPass: 2, vision: 1.2, ballControl: 2, dribbling: 1.8, acceleration: 1.5, sprintSpeed: 1.5, reactions: 1.5, shotPower: 1, agility: 1 }, pos: { ST: 1, CF: 1, RW: 0.9, LW: 0.9, CAM: 0.86 }, ps: PS_ST },
