@@ -265,3 +265,6 @@ input[type=range]{padding:0;accent-color:var(--lime);height:22px}
 .loading span{width:220px;height:4px;background:var(--panel2);position:relative;overflow:hidden;border-radius:2px}
 .loading span::after{content:"";position:absolute;inset:0;width:40%;background:var(--lime);animation:ld 1s infinite ease-in-out}
 @keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+
+.legend{margin-left:auto;display:inline-flex;align-items:center;gap:8px}
+.legend .dot{width:14px;height:14px;border-radius:3px;background:linear-gradient(135deg,#26272d,#050507);border:1.5px solid #e9c874;transform:skewX(-10deg)}

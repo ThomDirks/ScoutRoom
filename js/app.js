@@ -209,7 +209,17 @@
   /* --------------------------------------------------------- shared bits */
   const ISO3 = { england: 'ENG', france: 'FRA', germany: 'GER', spain: 'ESP', italy: 'ITA', portugal: 'POR', netherlands: 'NED', belgium: 'BEL', brazil: 'BRA', argentina: 'ARG', norway: 'NOR', sweden: 'SWE', denmark: 'DEN', switzerland: 'SUI', austria: 'AUT', croatia: 'CRO', serbia: 'SRB', poland: 'POL', turkey: 'TUR', uruguay: 'URU', colombia: 'COL', ecuador: 'ECU', mexico: 'MEX', usa: 'USA', canada: 'CAN', japan: 'JPN', southkorea: 'KOR', morocco: 'MAR', senegal: 'SEN', nigeria: 'NGA', ghana: 'GHA', ivorycoast: 'CIV', egypt: 'EGY', cameroon: 'CMR', algeria: 'ALG', scotland: 'SCO', wales: 'WAL', ireland: 'IRL', republicofireland: 'IRL', czechrepublic: 'CZE', ukraine: 'UKR', hungary: 'HUN', slovenia: 'SVN', slovakia: 'SVK', greece: 'GRE', finland: 'FIN', iceland: 'ISL', paraguay: 'PAR', chile: 'CHI', peru: 'PER', venezuela: 'VEN', australia: 'AUS', georgia: 'GEO', albania: 'ALB', kosovo: 'KOS', romania: 'ROU', bulgaria: 'BUL', mali: 'MLI', guinea: 'GUI', tunisia: 'TUN', drcongo: 'COD', northernireland: 'NIR', bosniaandherzegovina: 'BIH', northmacedonia: 'MKD', montenegro: 'MNE', israel: 'ISR', jamaica: 'JAM', iran: 'IRN', china: 'CHN', saudiarabia: 'KSA', uzbekistan: 'UZB', armenia: 'ARM' };
   const nat3 = n => n ? (ISO3[E.natKey(n)] || n.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase()) : '';
-  const tierOf = o => o >= 85 ? 'elite' : o >= 78 ? 'gold' : o >= 70 ? 'silver' : 'bronze';
+  /* Black ('elite') is a scout pick: better than the squad average, fits the system, fits the club. Everything else is coloured by overall. */
+  const PICK_FIT = 70, PICK_LORE = 45;
+  function squadAvg() {
+    return cached('avg', () => {
+      const ctx = buildCtx(); const v = formation().slots.map(sl => ctx.incumbentFor(sl)).filter(n => n != null);
+      if (v.length >= 5) return Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10;
+      return ctx.pullInfo && ctx.pullInfo.teamOvr ? ctx.pullInfo.teamOvr : null;
+    });
+  }
+  const isPick = (p, e) => { const a = squadAvg(); return a != null && p.ovr > a && e.fit >= PICK_FIT && e.lore >= PICK_LORE; };
+  const tierOf = (o, pick) => pick ? 'elite' : o >= 78 ? 'gold' : o >= 70 ? 'silver' : 'bronze';
   const initials = n => n.replace(/^Demo\s+/, '').split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const shortName = n => { if (n.length <= 15) return n; const w = n.split(/\s+/); return w.length > 1 ? w[0][0] + '. ' + w.slice(1).join(' ') : n; };
   const willClass = l => ({ Likely: 'good', Possible: 'ok', Reach: 'warn', Unlikely: 'bad' }[l]);
@@ -230,7 +240,7 @@
   const crest = c => (c || '').replace(/\b(FC|CF|AFC|SC|AC|AS|SV|VfB|VfL|BV|FK|1\.)\b/gi, '').trim().split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 3).toUpperCase() || '·';
   function card(r) {
     const p = r.p, e = r.ev; const st = cardStats(p); const pl = e.willInfo.label;
-    return `<article class="pc ${tierOf(p.ovr)}" data-act="open" data-v="${esc(p.key)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr} overall">
+    return `<article class="pc ${tierOf(p.ovr, isPick(p, e))}" data-act="open" data-v="${esc(p.key)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr} overall">
       <div class="pc-card">
         <div class="pc-l"><b class="pc-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span><span class="pc-nat">${esc(nat3(p.nationality))}</span><span class="pc-crest" title="${esc(p.club || 'Free agent')}">${esc(p.free ? 'FA' : crest(p.club))}</span></div>
         <div class="pc-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
@@ -322,6 +332,7 @@
       <span class="lab sp">Age</span>
       ${[[40, 'Any'], [30, 'Under 31'], [25, 'Under 26'], [21, 'Under 22']].map(([n, l]) => `<button class="pill ${u.maxAge === n ? 'on' : ''}" data-act="age" data-v="${n}">${l}</button>`).join('')}
       <a class="link" href="#market" data-act="tab" data-v="market">More filters</a>
+      <span class="hint legend"><i class="dot"></i>${squadAvg() != null ? `Black card: better than your squad average (${squadAvg()}), fit ${PICK_FIT}+, lore ${PICK_LORE}+.` : 'Black cards show up once you add your players or log a window with your team OVR.'}</span>
       ${own.length ? `<span class="hint">Your ${own.length} players are left out.</span>` : ''}
     </section>
     <section class="hero">
@@ -394,7 +405,7 @@
       const p = r.p, e = r.ev; const watched = career().watchlist.some(w => w.key === p.key);
       return `<tr data-act="open" data-v="${esc(p.key)}" tabindex="0">
             <td class="num dim">${i + 1}</td>
-            <td><div class="pname">${esc(p.name)}<span class="ptag t-${tierOf(p.ovr)}">${esc(e.slot !== p.positions[0] && u.pos === 'LINEUP' ? e.slot : (p.positions[0] || '?'))}</span></div><div class="psub">${esc(p.positions.join(' · ') || '?')} · age ${p.age ?? '?'} · ${esc(p.club || 'No club')}${p.nationality ? ' · ' + esc(p.nationality) : ''}</div></td>
+            <td><div class="pname">${esc(p.name)}<span class="ptag t-${tierOf(p.ovr, isPick(p, e))}">${esc(e.slot !== p.positions[0] && u.pos === 'LINEUP' ? e.slot : (p.positions[0] || '?'))}</span></div><div class="psub">${esc(p.positions.join(' · ') || '?')} · age ${p.age ?? '?'} · ${esc(p.club || 'No club')}${p.nationality ? ' · ' + esc(p.nationality) : ''}</div></td>
             <td class="num"><b>${p.ovr}</b><span class="dim">/${p.pot ?? '?'}</span></td>
             <td>${meter(e.fit)}${e.fitInfo.coverage === 0 ? '<span class="tag bad">no stats</span>' : (e.fitInfo.approx ? '<span class="tag">est.</span>' : '')}</td>
             <td>${meter(e.will, willClass(e.willInfo.label))}<span class="lbl ${willClass(e.willInfo.label)}">${e.willInfo.label}</span></td>
@@ -423,7 +434,7 @@
     d.innerHTML = `
       <div class="dr-in">
         <button class="x" data-act="close" aria-label="Close player details">Close</button>
-        <div class="dr-card ${tierOf(p.ovr)}"><div><b class="big-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span></div><div><h2>${esc(p.name)}</h2><p>${esc(p.positions.join(' · ') || '?')} · age ${p.age ?? '?'} · ${esc(p.club || 'No club')}${p.nationality ? ' · ' + esc(p.nationality) : ''}</p></div></div>
+        <div class="dr-card ${tierOf(p.ovr, isPick(p, ev))}"><div><b class="big-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span></div><div><h2>${esc(p.name)}</h2><p>${esc(p.positions.join(' · ') || '?')} · age ${p.age ?? '?'} · ${esc(p.club || 'No club')}${p.nationality ? ' · ' + esc(p.nationality) : ''}</p></div></div>
         <dl class="facts">
           <div><dt>POT</dt><dd>${p.pot ?? '?'}</dd></div><div><dt>Value</dt><dd>${fmt(p.value)}</dd></div><div><dt>Wage</dt><dd>${p.wage != null ? fmt(p.wage) + '/wk' : '-'}</dd></div>
           <div><dt>Clause</dt><dd>${p.release != null ? fmt(p.release) : '-'}</dd></div><div><dt>Contract</dt><dd>${p.free ? 'Free' : (p.contractEnd || '-')}</dd></div><div><dt>Foot</dt><dd>${p.foot || '-'}${p.weak ? ' · WF ' + p.weak : ''}</dd></div>
