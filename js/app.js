@@ -472,11 +472,7 @@
     d.innerHTML = `
       <div class="dr-in">
         <button class="x" data-act="close" aria-label="Close player details">Close</button>
-        <div class="dr-card ${tierOf(p.ovr, isPick(p, ev))}"><div><b class="big-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span></div><div><h2>${esc(p.name)}</h2><p>${esc(p.positions.join(' · ') || '?')} · age ${p.age ?? '?'} · ${esc(p.club || 'No club')}${p.nationality ? ' · ' + esc(p.nationality) : ''}</p></div></div>
-        <dl class="facts">
-          <div><dt>POT</dt><dd>${p.pot ?? '?'}</dd></div><div><dt>Value</dt><dd>${fmt(p.value)}</dd></div><div><dt>Wage</dt><dd>${p.wage != null ? fmt(p.wage) + '/wk' : '-'}</dd></div>
-          <div><dt>Clause</dt><dd>${p.release != null ? fmt(p.release) : '-'}</dd></div><div><dt>Contract</dt><dd>${p.free ? 'Free' : (p.contractEnd || '-')}</dd></div><div><dt>Foot</dt><dd>${p.foot || '-'}${p.weak ? ' · WF ' + p.weak : ''}</dd></div>
-        </dl>
+        <div class="dr-sheet">${sheet(p, ev)}</div>
         <div class="row gap wrap"><button class="btn ${watched ? '' : 'primary'}" data-act="watch" data-v="${esc(p.key)}">${watched ? 'Remove from shortlist' : 'Add to shortlist'}</button>
           <button class="btn" data-act="own" data-v="${esc(p.key)}">${career().squad.includes(p.key) ? 'Remove from my squad' : 'He is in my squad'}</button>
           <label class="inl">Judge as<select id="dr-pos">${[['LINEUP', 'Best slot in my lineup'], ['ANY', 'Best of any position'], ...E.POSITIONS.map(x => [x, x])].map(([k, l]) => `<option value="${k}" ${pos === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
@@ -496,6 +492,77 @@
   const openPlayer = (key, pos) => { S.ui.drawer = { key, pos: pos || 'LINEUP', focused: false }; renderDrawer(); };
   const closeDrawer = () => { S.ui.drawer = null; renderDrawer(); };
 
+  /* ------------------------------------------------- player sheet (like the in-game player panel) */
+  const PS_LABEL = { finesseshot: 'Finesse Shot', chipshot: 'Chip Shot', powershot: 'Power Shot', deadball: 'Dead Ball', powerheader: 'Power Header', precisionheader: 'Precision Header', lowdrivenshot: 'Low Driven Shot', acrobatic: 'Acrobatic', gamechanger: 'Game Changer', incisivepass: 'Incisive Pass', pingedpass: 'Pinged Pass', longballpass: 'Long Ball Pass', tikitaka: 'Tiki Taka', whippedpass: 'Whipped Pass', inventive: 'Inventive', jockey: 'Jockey', block: 'Block', intercept: 'Intercept', anticipate: 'Anticipate', slidetackle: 'Slide Tackle', bruiser: 'Bruiser', technical: 'Technical', rapid: 'Rapid', flair: 'Flair', firsttouch: 'First Touch', trickster: 'Trickster', pressproven: 'Press Proven', quickstep: 'Quick Step', relentless: 'Relentless', trivela: 'Trivela', longthrow: 'Long Throw', aerialfortress: 'Aerial Fortress', enforcer: 'Enforcer', footwork: 'Footwork', crossclaimer: 'Cross Claimer', rushout: 'Rush Out', farthrow: 'Far Throw', farreach: 'Far Reach', deflector: 'Deflector', earlycrosser: 'Early Crosser', longshottaker: 'Long Shot Taker', penaltytaker: 'Penalty Taker' };
+  const psLabel = k => { const plus = /plus$/.test(k) && !PS_LABEL[k]; const b = plus ? k.slice(0, -4) : k; return (PS_LABEL[b] || b) + (plus ? ' +' : ''); };
+  const stars = n => n ? '<span class="stars" aria-label="' + n + ' of 5">' + '&#9733;'.repeat(n) + '<s>' + '&#9733;'.repeat(Math.max(0, 5 - n)) + '</s></span>' : '-';
+  function sheet(p, ev) {
+    const st = cardStats(p); const c = career(); const kit = c.numbers[p.key] != null ? c.numbers[p.key] : p.kit;
+    const ps = p.playstyles || []; const slots10 = Array.from({ length: 10 }, (_, i) => ps[i] || null);
+    const tier = tierOf(p.ovr, ev ? isPick(p, ev) : false);
+    return `<div class="sheet ${tier}">
+      <div class="sh-top">
+        <div class="sh-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
+        <div class="sh-id">
+          <p class="sh-pos">${esc(p.positions.join('  ') || '?')}</p>
+          <h2>${esc(p.name)}</h2>
+          <p class="sh-sub">${esc(p.nationality || '')}${p.club ? ' · ' + esc(p.club) : ' · Free agent'}</p>
+        </div>
+        <div class="sh-ovr"><b>${p.ovr}</b></div>
+      </div>
+      <div class="sh-base"><span>Baseline OVR <b>${p.ovr}</b></span><span>Potential <b>${p.pot ?? '?'}</b></span></div>
+      <div class="sh-tiles"><div><em>Value</em><b>${fmt(p.value)}</b></div><div><em>Wage</em><b>${p.wage != null ? fmt(p.wage) + '/wk' : '-'}</b></div><div><em>Contract</em><b>${p.free ? 'Free' : (p.contractEnd || '-')}</b></div></div>
+      <div class="sh-cols">
+        <ul class="sh-stats">${st.map(([k, v]) => `<li><span>${({ PAC: 'Pace', SHO: 'Shooting', PAS: 'Passing', DRI: 'Dribbling', DEF: 'Defending', PHY: 'Physical', DIV: 'Diving', HAN: 'Handling', KIC: 'Kicking', REF: 'Reflexes', SPD: 'Speed', POS: 'Positioning' })[k]}</span><b>${v == null ? '-' : Math.round(v)}</b></li>`).join('')}</ul>
+        <ul class="sh-info">
+          <li><span>Age</span><b>${p.age ?? '?'}</b></li>
+          <li><span>Foot</span><b>${p.foot === 'R' ? 'Right' : p.foot === 'L' ? 'Left' : (p.foot || '-')}</b></li>
+          <li><span>Kit number</span><b>${kit != null ? kit : '-'}</b></li>
+          <li><span>Clause</span><b>${p.release != null ? fmt(p.release) : '-'}</b></li>
+          <li><span>Skill moves</span>${stars(p.skill)}</li>
+          <li><span>Weak foot</span>${stars(p.weak)}</li>
+        </ul>
+      </div>
+      <p class="sh-h">PlayStyles</p>
+      <div class="sh-ps">${slots10.map(k => k ? `<span class="on ${/plus$/.test(k) ? 'pl' : ''}" title="${esc(psLabel(k))}"><i></i><em class="ps-t">${esc(psLabel(k).replace(/\s*\+$/, '').split(' ').map((w, _i, a) => a.length > 1 ? w[0] : w.slice(0, 2)).join('').slice(0, 2))}</em><small>${esc(psLabel(k))}</small></span>` : '<span class="off"><i></i></span>').join('')}</div>
+      ${ps.length ? `<p class="sh-psn">${ps.map(k => esc(psLabel(k))).join(' · ')}</p>` : ''}
+    </div>`;
+  }
+
+  /* ------------------------------------------------- team management (pitch of cards + bench + sheet) */
+  function miniCard(p, slotPos, on, act, v, extra) {
+    return `<div class="mc ${tierOf(p.ovr, false)} ${on ? 'on' : ''}" data-act="${act}" data-v="${esc(v)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr}">
+      <b class="mc-o">${p.ovr}</b><span class="mc-p">${esc(slotPos || p.positions[0] || '')}</span>
+      <div class="mc-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
+      <span class="mc-n">${esc(shortName(p.name).split(' ').slice(-1)[0])}</span>${extra || ''}</div>`;
+  }
+  function teamManagement() {
+    const c = career(); const f = formation(); const own = ownPlayers();
+    if (!own.length) return `<section class="panel tm-empty"><div class="empty"><h3>Add your players</h3><p>Type a name below, or add everyone from your club. They show up here on the pitch like the in-game squad screen.</p></div><label class="inl">Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label></section>`;
+    const { xi, used, pool } = ownXI(true);
+    const subs = pool.filter(p => !used.has(p.key)).sort((a, b) => b.ovr - a.ovr);
+    const firstKey = (Object.values(xi)[0] || {}).p ? Object.values(xi)[0].p.key : own[0].key;
+    const selKey = S.ui.squadSel && byKey(S.ui.squadSel) && c.squad.includes(S.ui.squadSel) ? S.ui.squadSel : firstKey;
+    const sel = byKey(selKey);
+    const avg = Object.values(xi).length ? Math.round(Object.values(xi).reduce((a, r) => a + r.p.ovr, 0) / Object.values(xi).length * 10) / 10 : null;
+    return `<div class="tm">
+      <section class="panel tm-left">
+        <div class="tm-bar"><div class="tm-t"><h2>Team management</h2><span class="hint">${avg != null ? 'Starting XI average ' + avg : ''}</span></div>
+          <label class="inl">Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label></div>
+        <div class="tm-pitch" role="group" aria-label="Starting lineup">
+          <i class="ln mid"></i><i class="ln circ"></i><i class="ln box t"></i><i class="ln box b"></i>
+          ${f.slots.map(s => { const r = xi[s.id]; const st = `left:${s.x}%;top:${s.y}%`; return r ? `<div class="slot" style="${st}">${miniCard(r.p, s.pos, r.p.key === selKey, 'sq-pick', s.id + '|' + r.p.key)}</div>` : `<div class="slot" style="${st}"><div class="mc open" data-act="sq" data-v="${s.id}" tabindex="0"><span class="mc-p">${s.pos}</span><span class="mc-n">open</span></div></div>`; }).join('')}
+        </div>
+        <p class="sub-h">Substitutes</p>
+        <div class="tm-bench">${subs.length ? subs.map(p => miniCard(p, p.positions[0], p.key === selKey, 'sq-sel', p.key)).join('') : '<span class="hint">Nobody on the bench yet.</span>'}</div>
+      </section>
+      <section class="panel tm-right">
+        ${sheet(sel, null)}
+        <div class="row gap wrap sh-act"><button class="btn" data-act="open" data-v="${esc(sel.key)}">Full profile</button></div>
+      </section>
+    </div>`;
+  }
+
   /* ---------------------------------------------------------------- Squad */
   function viewSquad() {
     const c = career(); const f = formation(); const slots = f.slots;
@@ -503,10 +570,11 @@
     const s = slots.find(x => x.id === sel); const role = E.roleOf(s);
     const ctx = buildCtx(); const top = (() => { const out = []; const hid = hiddenKeys(); for (const p of DB) { if (p.ovr == null || hid.has(p.key) || !passesFloor(p, ctx) || !E.posFactor(p, s)) continue; out.push({ p, ev: evalC(p, s, ctx) }); } return out.sort((a, b) => b.ev.total - a.ev.total).slice(0, 6); })();
     return `
+    ${teamManagement()}
     <div class="split squad">
       <section class="panel">
-        <div class="row wrap gap"><label>Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
-          <p class="hint grow">Click a position to set your starter there and see the best targets for it.</p></div>
+        <div class="row wrap gap"><h2 class="grow">Targets by position</h2></div>
+        <p class="hint">Click a position to see the best targets for it, or to set your starter there by hand.</p>
         ${pitchSVG(null, sel, { click: 'sq' })}
         <p class="hint">The small number under a position is your current starter's OVR. A player will not sign to sit on the bench, so it feeds the signing score.</p>
       </section>
@@ -987,6 +1055,8 @@
     if (act === 'more') { S.ui.limit += 48; return renderResults(); }
     if (act === 'watch') { ev.stopPropagation(); addWatch(v); save(); renderView(); return renderDrawer(); }
     if (act === 'sq') { S.ui.squadSlot = v; return renderView(); }
+    if (act === 'sq-pick') { const i = v.indexOf('|'); S.ui.squadSlot = v.slice(0, i); S.ui.squadSel = v.slice(i + 1); return renderView(); }
+    if (act === 'sq-sel') { S.ui.squadSel = v; return renderView(); }
     if (act === 'career-new') { const n = defaultCareer(); n.name = 'Career ' + (S.careers.length + 1); n.clubId = c.clubId; S.careers.push(n); S.activeId = n.id; save(); return renderAll(); }
     if (act === 'career-del') { if (S.careers.length < 2) return; S.careers = S.careers.filter(x => x.id !== c.id); S.activeId = S.careers[0].id; save(); return renderAll(); }
     if (act === 'win-add') {
