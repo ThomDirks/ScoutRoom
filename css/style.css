@@ -410,3 +410,12 @@ main{max-width:1500px;margin:0 auto;padding:22px 30px 100px}
 .sh-ps .on .ps-g{color:#dfe6f2}
 .sh-ps .on.pl i{border-color:#f1c24a;background:linear-gradient(145deg,#ffe07a40,#b8862a24);box-shadow:0 0 14px #f1c24a55,inset 0 0 0 1px #ffe9a533}
 .sh-ps .on.pl .ps-g{color:#ffd966}.ps-g .pp{stroke:#ffd966}
+/* in-game format: solid diamond, dark glyph cut into it. silver = PlayStyle, gold = PlayStyle+, dim = not owned */
+.sh-ps{gap:12px 8px}
+.sh-ps span{max-width:54px}
+.sh-ps i{width:74%;border:0;border-radius:6px;background:#ffffff12;box-shadow:none}
+.sh-ps .on i{background:linear-gradient(145deg,#ffffff,#c9d3e3);border:0;box-shadow:0 2px 10px #0008}
+.sh-ps .on .ps-g{color:#0a111b;stroke-width:2;width:50%;height:50%;left:25%;top:25%}
+.sh-ps .on.pl i{background:linear-gradient(145deg,#ffe58a,#e0a92e);box-shadow:0 0 16px #f1c24a77,0 2px 10px #0008}
+.sh-ps .on.pl .ps-g{color:#1a1204}.sh-ps .on.pl .ps-g .pp{stroke:#1a1204}
+.ps-g .pp{stroke:#0a111b}

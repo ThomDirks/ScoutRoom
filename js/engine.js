@@ -128,7 +128,7 @@ const Engine = (() => {
     const w = s.replace(/\+/g, ' + ').split(/\s+/).filter(Boolean); const out = [];
     for (let i = 0; i < w.length;) {
       let hit = null, n = 0;
-      for (let len = Math.min(4, w.length - i); len >= 1; len--) { const k = norm(w.slice(i, i + len).join('')); if (PS_VOCAB.has(k)) { hit = k; n = len; break; } }
+      for (let len = Math.min(4, w.length - i); len >= 1; len--) { if (w.slice(i, i + len).includes('+')) continue; const k = norm(w.slice(i, i + len).join('')); if (PS_VOCAB.has(k)) { hit = k; n = len; break; } }
       if (!hit) { i++; continue; }
       i += n; if (w[i] === '+') { out.push(hit + 'plus'); i++; } else out.push(hit);
     }
