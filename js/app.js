@@ -829,7 +829,7 @@
     }
     const box = document.createElement('div');
     box.style.cssText = 'position:fixed;z-index:2147483647;right:16px;bottom:16px;max-width:340px;padding:14px 16px;border-radius:12px;background:#0b111b;color:#e9eef7;font:14px/1.4 system-ui,sans-serif;border:2px solid #c6ff3d;box-shadow:0 10px 40px #000a';
-    const say = m => { box.textContent = 'Scout Room: ' + m; };
+    const say = m => { box.textContent = 'Scout Room scanner v2: ' + m; };
     document.body.appendChild(box);
     (async () => {
       const first = extract(document);
@@ -870,6 +870,7 @@
     return `
     <section class="panel steps">
       <h2>Load your SoFIFA players</h2>
+      <p class="hint"><b>Scanner v2.</b> Its progress box says "Scout Room scanner v2". If yours doesn't say that, you pasted an old copy.</p>
       <p class="hint">Nothing to install. You copy a small script, paste it into SoFIFA in your own Chrome, and it reads the list page by page with a pause between pages. You clear SoFIFA's check yourself, so it never gets blocked.</p>
       <ol class="how">
         <li><b>Copy the script.</b>
