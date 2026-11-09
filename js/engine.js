@@ -226,7 +226,7 @@ const Engine = (() => {
   const gk = P('GK', 'GK', 50, 92);
   const pivot = [P('LDM', 'CDM', 37, 55, { role: 'CDM', side: 'L' }), P('RDM', 'CDM', 63, 55, { role: 'CDM2', side: 'R' })];
   const FORMATIONS = {
-    '3-2-3-2': { label: '3-2-3-2 (the M)', slots: [P('ST1', 'ST', 34, 11), P('ST2', 'ST', 66, 11, { role: 'ST2' }), P('LM', 'LM', 12, 33), P('CAM', 'CAM', 50, 36), P('RM', 'RM', 88, 33), ...pivot, ...back3, gk], m: ['LM', 'ST1', 'CAM', 'ST2', 'RM'] },
+    '3-2-3-2': { label: '3-2-3-2', slots: [P('ST1', 'ST', 34, 11), P('ST2', 'ST', 66, 11, { role: 'ST2' }), P('LM', 'LM', 12, 33), P('CAM', 'CAM', 50, 36), P('RM', 'RM', 88, 33), ...pivot, ...back3, gk], m: ['LM', 'ST1', 'CAM', 'ST2', 'RM'] },
     '3-2-3-2w': { label: '3-2-3-2 with wingers', slots: [P('ST1', 'ST', 34, 11), P('ST2', 'ST', 66, 11, { role: 'ST2' }), P('LW', 'LW', 12, 31), P('CAM', 'CAM', 50, 36), P('RW', 'RW', 88, 31), ...pivot, ...back3, gk], m: ['LW', 'ST1', 'CAM', 'ST2', 'RW'] },
     '3-2-4-1': { label: '3-2-4-1', slots: [P('ST', 'ST', 50, 11), P('LM', 'LM', 12, 33), P('LAM', 'CAM', 38, 32), P('RAM', 'CAM', 62, 32), P('RM', 'RM', 88, 33), ...pivot, ...back3, gk], m: [] },
     '3-5-2': { label: '3-5-2', slots: [P('ST1', 'ST', 34, 11), P('ST2', 'ST', 66, 11, { role: 'ST2' }), P('LWB', 'LWB', 9, 42), P('LCM', 'CM', 32, 38, { side: 'L' }), P('CDM', 'CDM', 50, 56), P('RCM', 'CM', 68, 38, { side: 'R' }), P('RWB', 'RWB', 91, 42), ...back3, gk], m: [] },
@@ -261,9 +261,16 @@ const Engine = (() => {
     return best;
   }
 
+  const fitMemo = new WeakMap(); const derMemo = new WeakMap();
   function slotFit(p, slot, opts) {
+    const ck = (slot.id || '') + '|' + (slot.role || '') + '|' + slot.pos + '|' + (slot.side || '') + '|' + (opts && opts.oop ? 1 : 0);
+    let m = fitMemo.get(p); if (!m) { m = new Map(); fitMemo.set(p, m); }
+    let r = m.get(ck); if (!r) { r = slotFitRaw(p, slot, opts); m.set(ck, r); }
+    return r;
+  }
+  function slotFitRaw(p, slot, opts) {
     const role = roleOf(slot);
-    const derived = derivedAttrs(p);
+    let derived = derMemo.get(p); if (!derived) { derived = derivedAttrs(p); derMemo.set(p, derived); }
     let sw = 0, sv = 0, tot = 0, miss = 0, usedDerived = false;
     Object.entries(role.w).forEach(([k, w]) => {
       tot += w;
@@ -409,7 +416,7 @@ const Engine = (() => {
   function evaluate(p, slot, ctx) {
     const f = slotFit(p, slot, { oop: ctx.oop });
     const w = willingness(p, Object.assign({}, ctx, { incumbent: ctx.incumbentFor ? ctx.incumbentFor(slot) : (ctx.incumbents ? ctx.incumbents[slot.id] : null) }));
-    const l = lore(p, ctx.profile);
+    const l = ctx.loreOf ? ctx.loreOf(p) : lore(p, ctx.profile);
     const wt = ctx.weights; const sum = (wt.fit + wt.will + wt.lore) || 1;
     const total = Math.round((wt.fit * f.fit + wt.will * w.will + wt.lore * l.lore) / sum);
     return { slot: slot.id, fit: f.fit, fitInfo: f, will: w.will, willInfo: w, lore: l.lore, loreInfo: l, total };

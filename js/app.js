@@ -30,6 +30,24 @@
   try { const raw = localStorage.getItem(LS_KEY); if (raw) { const o = JSON.parse(raw); if (o && o.careers && o.careers.length) S = adopt(o); } } catch (e) { /* storage unavailable */ }
 
   let DB = [];
+  let DBMAP = new Map();
+  const memo = new Map();
+  const bump = () => memo.clear();
+  const cached = (k, f) => { if (memo.has(k)) return memo.get(k); const v = f(); memo.set(k, v); return v; };
+  const setDB = list => { DB = list; DBMAP = new Map(list.map(p => [p.key, p])); bump(); };
+  const byKey = k => DBMAP.get(k);
+  let lastFp = '';
+  function sync() {
+    const fp = JSON.stringify([career(), S.customProfiles, S.hidden, S.ui.oop], (k, v) => (k === 'snap' ? undefined : v));
+    if (fp !== lastFp) { lastFp = fp; memo.clear(); }
+  }
+  /* one evaluation per player and slot per state, shared by the rails, the lineup and the market */
+  function evalC(p, s, ctx) {
+    const em = cached('evm', () => new Map()); const sk = s.id + '|' + (s.role || '') + '|' + s.pos + '|' + (s.side || '') + '|' + (ctx.oop ? 1 : 0);
+    let m = em.get(sk); if (!m) { m = new Map(); em.set(sk, m); }
+    let r = m.get(p.key); if (!r) { r = E.evaluate(p, s, ctx); m.set(p.key, r); }
+    return r;
+  }
   let DEMO = false;
   let cloud = { status: 'checking', ref: null };
   const career = () => S.careers.find(c => c.id === S.activeId) || S.careers[0];
@@ -37,7 +55,7 @@
   /* ------------------------------------------------------------- storage */
   let saveTimer = null;
   function save() {
-    S.savedAt = Date.now();
+    bump(); S.savedAt = Date.now();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       const json = JSON.stringify(S);
@@ -74,9 +92,26 @@
     async set(k, v) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
     async del(k) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
   };
+  /* data/players.json is the shared player file (columnar: keys + rows). A new version number replaces what is stored here. */
+  async function fetchPlayerFile() {
+    try {
+      const r = await fetch('data/players.json', { cache: 'no-cache' }); if (!r.ok) return null;
+      const j = await r.json(); if (!j || !j.keys || !j.rows) return null;
+      const players = j.rows.map(row => { const p = {}; j.keys.forEach((k, i) => { if (row[i] !== null && row[i] !== undefined) p[k] = row[i]; }); if (!p.positions) p.positions = []; if (!p.playstyles) p.playstyles = []; return p; });
+      return { version: String(j.version || ''), players };
+    } catch (e) { return null; }
+  }
   async function loadPlayers() {
-    try { const v = await idb.get('players'); if (v && v.length) { DB = v; DEMO = false; return; } } catch (e) { /* no idb */ }
-    DB = makeDemo(); DEMO = true;
+    let stored = null, storedV = null;
+    try { stored = await idb.get('players'); storedV = await idb.get('playersVersion'); } catch (e) { /* no idb */ }
+    const file = typeof BUNDLED === 'undefined' ? await fetchPlayerFile() : null;
+    if (file && file.players.length && file.version !== storedV) {
+      setDB(file.players); DEMO = false;
+      try { await idb.set('players', DB); await idb.set('playersVersion', file.version); } catch (e) { /* ignore */ }
+      return;
+    }
+    if (stored && stored.length) { setDB(stored); DEMO = false; return; }
+    setDB(makeDemo()); DEMO = true;
   }
   async function persistPlayers() { try { await idb.set('players', DB); return true; } catch (e) { return false; } }
 
@@ -106,7 +141,7 @@
   const slotAny = id => formation().slots.find(s => s.id === id) || E.posSlot(id);
   const ownKeys = () => new Set(career().squad || []);
   const hiddenKeys = () => { const c = career(); return new Set([...(c.squad || []), ...(c.sold || []).map(x => x.key)]); };
-  function ownPlayers() { const k = ownKeys(); return k.size ? DB.filter(p => k.has(p.key) && p.ovr != null) : []; }
+  function ownPlayers() { return cached('own', () => { const k = ownKeys(); return k.size ? [...k].map(byKey).filter(p => p && p.ovr != null) : []; }); }
   function passesFloor(p, ctx) {
     const u = S.ui;
     if (u.minOvr && p.ovr < u.minOvr) return false;
@@ -118,18 +153,21 @@
     if (u.maxPrice && !p.free && p.value != null && p.value * ctx.markup > u.maxPrice * 1e6) return false;
     return true;
   }
-  function buildCtx() {
-    const c = career(); const prof = getProfile(c.clubId);
+  function buildCtx() { return cached('ctx', buildCtxRaw); }
+  function buildCtxRaw() {
+    const c = career(); const incMemo = new Map(); const loreMemo = new WeakMap(); const prof = getProfile(c.clubId);
     const pullInfo = E.clubPull(prof, c.windows);
     const seasonEnd = c.now.type === 'Summer' ? c.now.year + 1 : c.now.year;
     return {
       profile: prof, pull: pullInfo.pull, pullInfo, lookupClub, realism: c.realism, wageCap: c.wageCap * 1e3, budget: c.budget * 1e6, markup: c.markup, seasonEnd,
       incumbentFor: slot => {
         if (c.incumbents[slot.id]) return c.incumbents[slot.id];
+        const ik = slot.id + '|' + slot.pos; if (incMemo.has(ik)) return incMemo.get(ik);
         let best = 0; ownPlayers().forEach(p => { const f = E.posFactor(p, slot); if (f > 0) best = Math.max(best, p.ovr * Math.min(1, f)); });
-        return best ? Math.round(best) : null;
+        const r = best ? Math.round(best) : null; incMemo.set(ik, r); return r;
       },
       weights: c.weights, oop: S.ui.oop,
+      loreOf: p => { let l = loreMemo.get(p); if (!l) { l = E.lore(p, prof); loreMemo.set(p, l); } return l; },
     };
   }
   function candidateSlots(pos) {
@@ -140,6 +178,9 @@
 
   /** Rank the player pool. opts.pos overrides the position filter, opts.raw skips the filter bar. */
   function rank(opts = {}) {
+    const u0 = S.ui; return cached('rank|' + JSON.stringify([opts, u0.pos, u0.sort, u0.q, u0.minOvr, u0.minPot, u0.maxAge, u0.maxPrice, u0.nat, u0.contract, u0.hideUnlikely, u0.affordable, u0.oop]), () => rankRaw(opts));
+  }
+  function rankRaw(opts) {
     const ctx = buildCtx(); const u = S.ui; const raw = !!opts.raw; const q = raw ? '' : E.norm(u.q);
     const cand = candidateSlots(opts.pos || u.pos);
     const out = []; const own = hiddenKeys();
@@ -152,7 +193,7 @@
       let best = null;
       for (const s of cand) {
         if (!(raw ? false : u.oop) && !E.posFactor(p, s)) continue;
-        const ev = E.evaluate(p, s, ctx);
+        const ev = evalC(p, s, ctx);
         if (!best || ev.total > best.total) best = ev;
       }
       if (!best) continue;
@@ -174,26 +215,43 @@
   const willClass = l => ({ Likely: 'good', Possible: 'ok', Reach: 'warn', Unlikely: 'bad' }[l]);
   const meter = (v, cls) => `<span class="meter ${cls || ''}" role="img" aria-label="${v} of 100"><i style="width:${E.clamp(v)}%"></i><b>${v}</b></span>`;
 
+  const avgOf = (...v) => { const x = v.filter(n => n != null); return x.length ? Math.round(x.reduce((a, b) => a + b, 0) / x.length) : null; };
+  function cardStats(p) {
+    if (p.positions[0] === 'GK') return [['DIV', p.gkDiving], ['HAN', p.gkHandling], ['KIC', p.gkKicking], ['REF', p.gkReflexes], ['SPD', avgOf(p.acceleration, p.sprintSpeed)], ['POS', p.gkPositioning]];
+    return [
+      ['PAC', p.pac != null ? p.pac : avgOf(p.acceleration, p.sprintSpeed)],
+      ['SHO', p.sho != null ? p.sho : avgOf(p.finishing, p.shotPower, p.longShots, p.positioning, p.volleys, p.penalties)],
+      ['PAS', p.pas != null ? p.pas : avgOf(p.shortPass, p.vision, p.crossing, p.longPass, p.curve, p.fkAccuracy)],
+      ['DRI', p.drb != null ? p.drb : avgOf(p.dribbling, p.agility, p.balance, p.ballControl)],
+      ['DEF', p.def != null ? p.def : avgOf(p.interceptions, p.defAwareness, p.standTackle, p.slideTackle, p.heading)],
+      ['PHY', p.phy != null ? p.phy : avgOf(p.jumping, p.stamina, p.strength, p.aggression)],
+    ];
+  }
+  const crest = c => (c || '').replace(/\b(FC|CF|AFC|SC|AC|AS|SV|VfB|VfL|BV|FK|1\.)\b/gi, '').trim().split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 3).toUpperCase() || '·';
   function card(r) {
-    const p = r.p, e = r.ev;
+    const p = r.p, e = r.ev; const st = cardStats(p); const pl = e.willInfo.label;
     return `<article class="pc ${tierOf(p.ovr)}" data-act="open" data-v="${esc(p.key)}" tabindex="0" aria-label="${esc(p.name)}, ${p.ovr} overall">
-      <div class="pc-top"><b class="pc-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span><span class="pc-nat">${esc(nat3(p.nationality))}</span></div>
-      <div class="pc-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
-      <h3 class="pc-name">${esc(shortName(p.name))}</h3>
-      <p class="pc-club">${esc(p.club || 'Free agent')} · ${p.age ?? '?'}</p>
-      <div class="pc-scores"><span><i>Fit</i>${e.fit}</span><span><i>Sign</i>${e.will}</span><span><i>Lore</i>${e.lore}</span></div>
-      <div class="pc-foot"><span>${p.free ? 'Free' : fmt(e.willInfo.price)}</span><span class="lbl ${willClass(e.willInfo.label)}">${e.willInfo.label}</span></div>
+      <div class="pc-card">
+        <div class="pc-l"><b class="pc-ovr">${p.ovr}</b><span class="pc-pos">${esc(p.positions[0] || '?')}</span><span class="pc-nat">${esc(nat3(p.nationality))}</span><span class="pc-crest" title="${esc(p.club || 'Free agent')}">${esc(p.free ? 'FA' : crest(p.club))}</span></div>
+        <div class="pc-art" aria-hidden="true"><span>${esc(initials(p.name))}</span></div>
+        <h3 class="pc-name">${esc(shortName(p.name))}</h3>
+        <div class="pc-stats">${st.map(([k, v]) => `<span><b>${v == null ? '-' : Math.round(v)}</b>${k}</span>`).join('')}</div>
+      </div>
+      <div class="pc-meta">
+        <div class="pc-scores"><span class="s-fit"><i>Fit</i>${e.fit}</span><span class="s-sign"><i>Sign</i>${e.will}</span><span class="s-lore"><i>Lore</i>${e.lore}</span></div>
+        <div class="pc-foot"><span>${p.free ? 'Free' : fmt(e.willInfo.price)} · ${p.age ?? '?'}y</span><span class="lbl ${willClass(pl)}">${pl}</span></div>
+      </div>
     </article>`;
   }
 
-  const tabs = [['home', 'Home'], ['market', 'Market'], ['squad', 'Squad'], ['club', 'Club'], ['lore', 'Lore'], ['watch', 'Watchlist'], ['data', 'Data']];
+  const tabs = [['home', 'Briefing'], ['market', 'Market'], ['squad', 'Squad'], ['club', 'Club'], ['lore', 'Club DNA'], ['watch', 'Shortlist'], ['data', 'Data']];
 
   function renderHeader() {
     const c = career(); const prof = getProfile(c.clubId); const ctx = buildCtx();
     const sync = cloud.status === 'synced' ? ['synced', 'Saved to your account'] : (cloud.status === 'checking' ? ['', 'Checking save'] : ['local', 'Saved in this browser']);
     $('#hdr').innerHTML = `
       <div class="bar-in">
-        <a class="brand" href="#home" data-act="tab" data-v="home"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M3 27 L9 6 L16 20 L23 6 L29 27" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/></svg></span><span class="bn">Scout<em>Room</em></span></a>
+        <a class="brand" href="#home" data-act="tab" data-v="home"><span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="14" cy="14" r="8"/><path d="M20 20 L28 28"/><path d="M14 9 V19 M9 14 H19" stroke-width="1.8"/></svg></span><span class="bn">Scout<em>Room</em><small>Recruitment office</small></span></a>
         <nav class="tabs" aria-label="Sections">${tabs.map(([k, l]) => `<a href="#${k}" class="${S.ui.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}</a>`).join('')}</nav>
         <div class="vitals">
           <span class="vit"><em>${esc(c.now.type)} ${c.now.year}</em><strong>${esc(prof ? prof.name : 'Pick a club')}</strong></span>
@@ -205,7 +263,8 @@
   }
 
   /* ----------------------------------------------------------------- Home */
-  function bestXI(ctx) {
+  function bestXI(ctx) { return cached('xi', () => bestXIRaw(ctx)); }
+  function bestXIRaw(ctx) {
     const slots = formation().slots; const used = new Set(); const res = {}; const own = hiddenKeys();
     const order = [...slots].sort((a, b) => (a.pos === 'GK' ? -1 : 0) - (b.pos === 'GK' ? -1 : 0));
     order.forEach(s => {
@@ -213,7 +272,7 @@
       for (const p of DB) {
         if (used.has(p.key) || p.ovr == null || own.has(p.key) || !passesFloor(p, ctx)) continue;
         if (!E.posFactor(p, s)) continue;
-        const ev = E.evaluate(p, s, ctx);
+        const ev = evalC(p, s, ctx);
         if (ev.will < 40) continue;
         if (!best || ev.total > best.ev.total) best = { p, ev };
       }
@@ -224,14 +283,12 @@
 
   function pitchSVG(xi, selected, opts = {}) {
     const f = formation(); const c = career(); const pctx = buildCtx();
-    const mpath = f.m.length ? f.m.map(id => f.slots.find(s => s.id === id)).filter(Boolean).map(s => `${s.x * 3.6},${s.y * 4.8}`).join(' ') : '';
     return `<svg viewBox="0 0 360 480" class="pitch" role="img" aria-label="Formation ${esc(f.label)}">
       <defs><linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10261f"/><stop offset="1" stop-color="#0b1a16"/></linearGradient></defs>
       <rect x="2" y="2" width="356" height="476" rx="10" fill="url(#grass)" class="pf"/>
       ${[0, 1, 2, 3, 4, 5].map(i => `<rect x="2" y="${2 + i * 79.3}" width="356" height="39.6" class="stripe"/>`).join('')}
       <line x1="2" y1="240" x2="358" y2="240" class="pl"/><circle cx="180" cy="240" r="40" class="pl nofill"/>
       <rect x="86" y="2" width="188" height="62" class="pl nofill"/><rect x="86" y="416" width="188" height="62" class="pl nofill"/>
-      ${mpath ? `<polyline points="${mpath}" class="mline"/>` : ''}
       ${f.slots.map(s => {
       const r = xi && xi[s.id]; const inc = pctx.incumbentFor(s); const on = selected === s.id;
       const top = r ? r.p.ovr : (inc || '');
@@ -269,7 +326,7 @@
     </section>
     <section class="hero">
       <div class="hero-l">
-        <p class="eyebrow">${esc(c.now.type)} ${c.now.year} window · ${esc(prof ? prof.league : '')}</p>
+        <p class="eyebrow">Scouting briefing · ${esc(c.now.type)} ${c.now.year} window · ${esc(prof ? prof.league : '')}</p>
         <h1>${esc(prof ? prof.name : 'Pick your club')}</h1>
         <p class="lede">Your club pull is <b>${ctx.pull}</b>. ${word}</p>
         <div class="tiles">
@@ -281,7 +338,7 @@
         <div class="row gap wrap"><a class="btn primary" href="#market" data-act="tab" data-v="market">Open the market</a><a class="btn" href="#club" data-act="tab" data-v="club">Log this window</a></div>
         ${gaps.length ? `<h3 class="mini-h">Biggest upgrades on offer</h3><ul class="gaps">${gaps.map(g => `<li data-act="open" data-v="${esc(g.x.p.key)}" tabindex="0"><b>${g.s.pos}</b><span>${esc(g.x.p.name)}</span><em>+${g.d} OVR</em></li>`).join('')}</ul>` : `<p class="hint">Enter your starters on the Squad tab and the biggest upgrades show up here.</p>`}
       </div>
-      <div class="hero-r"><p class="eyebrow">Best realistic ${esc(formation().label)}</p>${pitchSVG(xi, null)}<p class="hint center">${filled} of ${slots.length} slots filled from players who would sign.</p></div>
+      <div class="hero-r"><p class="eyebrow">Best realistic lineup · ${esc(formation().label)}</p>${pitchSVG(xi, null)}<p class="hint center">${filled} of ${slots.length} slots filled from players who would sign.</p></div>
     </section>
     ${rails.map(r => `<section class="rail"><header><h2>${esc(r.t)}</h2><p>${esc(r.s)}</p></header><div class="rail-row">${r.rows.slice(0, 12).map(card).join('')}</div></section>`).join('')}
     ${!rails.length ? '<section class="panel"><div class="empty"><h3>No players to show yet</h3><p>Load a scan on the Data tab and this page fills with targets.</p></div></section>' : ''}`;
@@ -324,6 +381,7 @@
   }
 
   function renderResults() {
+    sync();
     const box = $('#results'); if (!box) return;
     const { rows } = rank(); const u = S.ui; const shown = rows.slice(0, u.limit);
     if (!rows.length) { box.innerHTML = `<div class="empty"><h3>Nobody matches yet</h3><p>Loosen the filters, try another position, or load more players on the Data tab.</p></div>`; return; }
@@ -343,7 +401,7 @@
             <td>${meter(e.lore, 'lore')}</td>
             <td class="num total">${e.total}</td>
             <td class="num">${p.free ? 'Free' : fmt(e.willInfo.price)}${e.willInfo.over ? '<span class="tag bad">over</span>' : ''}</td>
-            <td><button class="star ${watched ? 'on' : ''}" data-act="watch" data-v="${esc(p.key)}" aria-label="${watched ? 'Remove from' : 'Add to'} watchlist">${watched ? '★' : '☆'}</button></td>
+            <td><button class="star ${watched ? 'on' : ''}" data-act="watch" data-v="${esc(p.key)}" aria-label="${watched ? 'Remove from' : 'Add to'} shortlist">${watched ? '★' : '☆'}</button></td>
           </tr>`;
     }).join('')}</tbody></table></div>${more}`;
   }
@@ -352,7 +410,7 @@
   function renderDrawer() {
     const d = $('#drawer'); const dr = S.ui.drawer;
     if (!dr) { d.classList.remove('open'); d.setAttribute('aria-hidden', 'true'); d.innerHTML = ''; return; }
-    const p = DB.find(x => x.key === dr.key) || (career().watchlist.find(w => w.key === dr.key) || {}).snap;
+    const p = byKey(dr.key) || (career().watchlist.find(w => w.key === dr.key) || {}).snap;
     if (!p) { S.ui.drawer = null; return renderDrawer(); }
     const ctx = buildCtx(); let ev;
     const pos = dr.pos || 'LINEUP';
@@ -370,7 +428,7 @@
           <div><dt>POT</dt><dd>${p.pot ?? '?'}</dd></div><div><dt>Value</dt><dd>${fmt(p.value)}</dd></div><div><dt>Wage</dt><dd>${p.wage != null ? fmt(p.wage) + '/wk' : '-'}</dd></div>
           <div><dt>Clause</dt><dd>${p.release != null ? fmt(p.release) : '-'}</dd></div><div><dt>Contract</dt><dd>${p.free ? 'Free' : (p.contractEnd || '-')}</dd></div><div><dt>Foot</dt><dd>${p.foot || '-'}${p.weak ? ' · WF ' + p.weak : ''}</dd></div>
         </dl>
-        <div class="row gap wrap"><button class="btn ${watched ? '' : 'primary'}" data-act="watch" data-v="${esc(p.key)}">${watched ? 'Remove from watchlist' : 'Add to watchlist'}</button>
+        <div class="row gap wrap"><button class="btn ${watched ? '' : 'primary'}" data-act="watch" data-v="${esc(p.key)}">${watched ? 'Remove from shortlist' : 'Add to shortlist'}</button>
           <button class="btn" data-act="own" data-v="${esc(p.key)}">${career().squad.includes(p.key) ? 'Remove from my squad' : 'He is in my squad'}</button>
           <label class="inl">Judge as<select id="dr-pos">${[['LINEUP', 'Best slot in my lineup'], ['ANY', 'Best of any position'], ...E.POSITIONS.map(x => [x, x])].map(([k, l]) => `<option value="${k}" ${pos === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
         ${career().squad.includes(p.key) ? '' : `<div class="signbox"><label>Signed for (€M)<input id="dr-fee" type="number" min="0" step="0.5" value="${p.free ? 0 : Math.round((ev.willInfo.price || 0) / 1e5) / 10}"></label><button class="btn primary" data-act="sign" data-v="${esc(p.key)}">I signed him</button></div>`}
@@ -393,14 +451,12 @@
     const c = career(); const f = formation(); const slots = f.slots;
     const sel = S.ui.squadSlot && slots.some(s => s.id === S.ui.squadSlot) ? S.ui.squadSlot : slots[0].id;
     const s = slots.find(x => x.id === sel); const role = E.roleOf(s);
-    const { rows } = rank({ pos: 'LINEUP', raw: true });
-    const here = rows.filter(r => r.ev.slot === sel).slice(0, 6);
-    const ctx = buildCtx(); const top = (() => { const out = []; for (const p of DB) { if (!E.posFactor(p, s)) continue; out.push({ p, ev: E.evaluate(p, s, ctx) }); } return out.sort((a, b) => b.ev.total - a.ev.total).slice(0, 6); })();
+    const ctx = buildCtx(); const top = (() => { const out = []; const hid = hiddenKeys(); for (const p of DB) { if (p.ovr == null || hid.has(p.key) || !passesFloor(p, ctx) || !E.posFactor(p, s)) continue; out.push({ p, ev: evalC(p, s, ctx) }); } return out.sort((a, b) => b.ev.total - a.ev.total).slice(0, 6); })();
     return `
     <div class="split squad">
       <section class="panel">
         <div class="row wrap gap"><label>Formation<select id="s-form">${Object.entries(E.FORMATIONS).map(([k, v]) => `<option value="${k}" ${c.formation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select></label>
-          <p class="hint grow">${f.m.length ? 'The lit line is the M. Wide players and strikers set its points, the free eight sits in its dip, and the double pivot and back three sit behind so every row has cover.' : 'Click a slot to set your starter and see targets for it.'}</p></div>
+          <p class="hint grow">Click a position to set your starter there and see the best targets for it.</p></div>
         ${pitchSVG(null, sel, { click: 'sq' })}
         <p class="hint">The small number under a position is your current starter's OVR. A player will not sign to sit on the bench, so it feeds the signing score.</p>
       </section>
@@ -572,13 +628,13 @@
   /* ------------------------------------------------------------ Watchlist */
   function viewWatch() {
     const c = career(); const ctx = buildCtx();
-    if (!c.watchlist.length) return `<section class="panel"><div class="empty"><h3>Your watchlist is empty</h3><p>Star players on the Market. They stay here between windows, and their signing score updates as your club pull changes.</p></div></section>`;
+    if (!c.watchlist.length) return `<section class="panel"><div class="empty"><h3>Your shortlist is empty</h3><p>Star players on the Market. They stay on your shortlist between windows, and their signing score updates as your club pull changes.</p></div></section>`;
     const rows = c.watchlist.map(w => {
-      const p = DB.find(x => x.key === w.key) || w.snap; const slot = slotAny(w.slot);
+      const p = byKey(w.key) || w.snap; const slot = slotAny(w.slot);
       return { w, p, ev: E.evaluate(p, slot, Object.assign({}, ctx, { oop: true })) };
     });
     const status = ['Scouting', 'Target', 'Bought', 'Passed'];
-    return `<section class="panel"><h2>Watchlist</h2>
+    return `<section class="panel"><h2>Shortlist</h2>
       <p class="hint">Players you did not buy stay here. Scores use your club's pull today, and the change since you added them.</p>
       <div class="tablewrap"><table class="tbl"><thead><tr><th>Player</th><th>Slot</th><th class="num">OVR</th><th>Fit</th><th>Signing</th><th class="num">Since added</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody>
       ${rows.map(({ w, p, ev }) => { const d = ev.will - (w.at ? w.at.will : ev.will); return `<tr>
@@ -733,14 +789,21 @@
   }
 
   /* ---------------------------------------------------------------- render */
-  function renderAll() { clubCache = null; renderHeader(); renderView(); renderDrawer(); }
+  function renderAll() { clubCache = null; sync(); renderHeader(); renderView(); renderDrawer(); }
   function renderView() {
+    sync();
     const t = S.ui.tab; const v = $('#view');
     v.innerHTML = { home: viewHome, market: viewMarket, squad: viewSquad, club: viewClub, lore: viewLore, watch: viewWatch, data: viewData }[t]();
     if (t === 'market') renderResults();
     v.className = 'tab-' + t;
   }
-  const setTab = t => { S.ui.tab = t; S.ui.drawer = null; save(); renderAll(); window.scrollTo(0, 0); try { history.replaceState(null, '', '#' + t); } catch (e) { /* ignore */ } };
+  /* big player pools take a moment on the first pass, so paint a loading state first */
+  function renderAllSoon() {
+    if (DB.length < 3000) return renderAll();
+    renderHeader(); $('#view').innerHTML = '<div class="loading"><b>Scouting the pool</b><span></span></div>'; renderDrawer();
+    requestAnimationFrame(() => setTimeout(() => { renderAll(); }, 0));
+  }
+  const setTab = t => { S.ui.tab = t; S.ui.drawer = null; save(); renderAllSoon(); window.scrollTo(0, 0); try { history.replaceState(null, '', '#' + t); } catch (e) { /* ignore */ } };
 
   /* ---------------------------------------------------------------- events */
   async function copyText(text) {
@@ -753,7 +816,7 @@
   function addWatch(key) {
     const c = career(); const i = c.watchlist.findIndex(w => w.key === key);
     if (i >= 0) { c.watchlist.splice(i, 1); return; }
-    const p = DB.find(x => x.key === key); if (!p) return;
+    const p = byKey(key); if (!p) return;
     const ctx = buildCtx(); let best = null;
     const pos = (S.ui.drawer && S.ui.drawer.pos) || S.ui.pos;
     candidateSlots(pos).forEach(s => { const e = E.evaluate(p, s, Object.assign({}, ctx, { oop: true })); if (!best || e.total > best.total) best = e; });
@@ -795,7 +858,7 @@
     if (act === 'own') { const i = c.squad.indexOf(v); if (i >= 0) c.squad.splice(i, 1); else c.squad.push(v); save(); renderView(); return renderDrawer(); }
     if (act === 'sq-add') { if (!c.squad.includes(v)) c.squad.push(v); S.ui.sqQ = ''; save(); return renderView(); }
     if (act === 'sign') {
-      const p = DB.find(x => x.key === v) || (c.watchlist.find(w => w.key === v) || {}).snap; if (!p) return;
+      const p = byKey(v) || (c.watchlist.find(w => w.key === v) || {}).snap; if (!p) return;
       const inp = document.querySelector('#dr-fee'); const fee = inp && inp.value !== '' ? +inp.value : 0;
       if (!c.squad.includes(v)) c.squad.push(v);
       c.sold = (c.sold || []).filter(x => x.key !== v);
@@ -811,7 +874,7 @@
     }
     if (act === 'out-clear') { c.out = []; save(); return renderView(); }
     if (act === 'sq-sell') {
-      const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = DB.find(x => x.key === v);
+      const inp = document.querySelector('[data-fee="' + v.replace(/"/g, '') + '"]'); const p = byKey(v);
       const fee = inp && inp.value !== '' ? +inp.value : (p && p.value ? Math.round(p.value / 1e5) / 10 : 0);
       c.squad = c.squad.filter(k => k !== v); c.out = c.out.filter(k => k !== v); c.sold = c.sold || [];
       c.sold.push({ key: v, name: p ? p.name : v, ovr: p ? p.ovr : null, fee: fee || 0, when: c.now.type + ' ' + c.now.year });
@@ -862,7 +925,7 @@
     }
     if (act === 'copy-snippet') { const ok = await copyText(SNIPPET); t.textContent = ok ? 'Copied' : 'Copy blocked, select the text by hand'; return; }
     if (act === 'import') return doImport($('#d-paste').value);
-    if (act === 'clear-players') { DB = makeDemo(); DEMO = true; try { await idb.del('players'); } catch (e) { /* ignore */ } return renderAll(); }
+    if (act === 'clear-players') { setDB(makeDemo()); DEMO = true; try { await idb.del('players'); } catch (e) { /* ignore */ } return renderAll(); }
     if (act === 'backup') { const ok = await copyText(JSON.stringify(S)); return flash($('#d-bmsg'), ok ? 'Backup copied.' : 'Copy blocked. Your save is also stored in this browser.'); }
     if (act === 'restore') { try { const o = JSON.parse($('#d-backup').value); if (!o.careers) throw new Error('This is not a backup.'); S = adopt(o); save(); renderAll(); flash($('#d-bmsg'), 'Restored.'); } catch (e) { flash($('#d-bmsg'), 'Could not restore: ' + e.message); } return; }
   });
@@ -870,10 +933,10 @@
   async function doImport(text) {
     const rep = $('#d-report'); const r = E.parseTable(text);
     if (r.error) { rep.innerHTML = `<p class="bad">${esc(r.error)}</p>`; return; }
-    if (DEMO) DB = [];
+    if (DEMO) setDB([]);
     const map = new Map(DB.map(p => [p.key, p])); let added = 0, updated = 0;
     r.players.forEach(p => { if (map.has(p.key)) updated++; else added++; map.set(p.key, p); });
-    DB = [...map.values()]; DEMO = false; clubCache = null;
+    setDB([...map.values()]); DEMO = false; clubCache = null;
     const stored = await persistPlayers();
     const withAttr = r.players.filter(p => E.ATTR_KEYS.filter(k => p[k] != null).length >= 20).length;
     const usable = r.players.filter(p => E.ATTR_KEYS.filter(k => p[k] != null).length >= 10 || E.FACE_KEYS.filter(k => p[k] != null).length >= 4).length;
@@ -886,7 +949,7 @@
       <p class="hint">Recognised columns: ${r.recognized.map(esc).join(', ')}.</p>
       ${missing.length ? `<p class="warn">Not found: ${missing.join(', ')}. Scores that rely on these will be softer.</p>` : ''}
       ${unk.length ? `<p class="hint">Ignored columns: ${unk.slice(0, 12).map(esc).join(', ')}${unk.length > 12 ? '…' : ''}.</p>` : ''}
-      <p><a class="btn primary" href="#home" data-act="tab" data-v="home">See your players on Home</a></p>`;
+      <p><a class="btn primary" href="#home" data-act="tab" data-v="home">Open the briefing</a></p>`;
     const pt = $('#d-paste'); if (pt) pt.value = ''; renderHeader();
   }
 
@@ -955,5 +1018,5 @@
     renderAll();
     initCloud();
   })();
-  window.__bench = { get S() { return S; }, get DB() { return DB; }, rank, buildCtx, doImport, bestXI };
+  window.__bench = { setDB, renderAll, get S() { return S; }, get DB() { return DB; }, rank, buildCtx, doImport, bestXI };
 })();

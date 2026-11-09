@@ -11,12 +11,17 @@ index.html          the page shell
 css/style.css       all styling
 js/engine.js        scoring: system fit, signing willingness, lore
 js/app.js           the interface, saving, importing
+data/players.json   the shared player file (made by tools/build-players.js)
+tools/              build-players.js
 data/clubs/         one JSON file per league, plus index.json listing them
 ```
 
 ## Loading players
 
-Open the Data tab. It has the steps: copy a script, run it in the console on your SoFIFA list, upload the file it saves.
+Two ways.
+
+1. In the app: Data tab. Copy the script, run it in the console on your SoFIFA list, upload the file it saves. This is stored in your browser only.
+2. For everyone who opens the site: put the scan files through `node tools/build-players.js scan.tsv` (more than one file is fine). It writes `data/players.json`. Commit that, and the site loads it on the next visit. A new file replaces what a browser had stored.
 
 ## Adding or changing clubs
 
