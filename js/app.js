@@ -216,9 +216,15 @@
     return cached('avg', () => {
       const ctx = buildCtx(); const v = formation().slots.map(sl => ctx.incumbentFor(sl)).filter(n => n != null);
       if (v.length >= 5) return Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10;
-      return ctx.pullInfo && ctx.pullInfo.teamOvr ? ctx.pullInfo.teamOvr : null;
+      if (ctx.pullInfo && ctx.pullInfo.teamOvr) return ctx.pullInfo.teamOvr;
+      const k = ctx.profile ? E.norm(ctx.profile.name) : '';
+      if (k) { const top = DB.filter(p => !p.demo && p.ovr != null && E.norm(p.club) === k).map(p => p.ovr).sort((x, y) => y - x).slice(0, 14); if (top.length >= 11) return Math.round(top.reduce((x, y) => x + y, 0) / top.length * 10) / 10; }
+      return null;
     });
   }
+  /* The front page only suggests players around the level of the team: a little below to a clear step up. */
+  const BAND_LO = 3, BAND_HI = 5;
+  const nearLevel = (p, lo = BAND_LO) => { const l = squadAvg(); return l == null || (p.ovr >= l - lo && p.ovr <= l + BAND_HI); };
   /* better than whoever you have in that position now (or the squad average when the slot is open) */
   const isPick = (p, e) => {
     if (e.fit < PICK_FIT || e.lore < PICK_LORE) return false;
@@ -286,7 +292,7 @@
     order.forEach(s => {
       let best = null;
       for (const p of DB) {
-        if (used.has(p.key) || p.ovr == null || own.has(p.key) || !passesFloor(p, ctx)) continue;
+        if (used.has(p.key) || p.ovr == null || own.has(p.key) || !nearLevel(p) || !passesFloor(p, ctx)) continue;
         if (!E.posFactor(p, s)) continue;
         const ev = evalC(p, s, ctx);
         if (ev.will < 40) continue;
@@ -318,7 +324,7 @@
 
   function viewHome() {
     const c = career(); const prof = getProfile(c.clubId); const ctx = buildCtx(); const u = S.ui;
-    const all = rank({ pos: 'LINEUP', raw: true }).rows; const own = ownPlayers();
+    const lvl = squadAvg(); const all = rank({ pos: 'LINEUP', raw: true }).rows.filter(r => nearLevel(r.p)); const own = ownPlayers();
     const xi = bestXI(ctx); const slots = formation().slots;
     const filled = slots.filter(s => xi[s.id]).length;
     const word = ctx.pull >= 85 ? 'Almost any player will take your call.' : ctx.pull >= 70 ? 'Strong enough to pull most targets, with a few stars out of reach.' : ctx.pull >= 55 ? 'You can sign solid players, so aim at the right fit rather than the biggest name.' : 'Expect to win on fit and free agents. Stars will say no for now.';
@@ -328,7 +334,7 @@
       { t: 'Ready to sign', s: 'They want to come. Ranked by total score', rows: all.filter(r => r.ev.will >= 75) },
       { t: 'Free agents', s: 'No fee, only wages', rows: all.filter(r => r.p.free) },
       { t: 'Value picks', s: 'Good fit for under half your budget', rows: all.filter(r => !r.p.free && r.ev.willInfo.price != null && r.ev.willInfo.price <= ctx.budget * 0.5 && r.ev.will >= 55 && r.ev.fit >= 55).sort((a, b) => b.ev.fit - a.ev.fit) },
-      { t: 'Wonderkids', s: '21 or younger, highest potential first', rows: all.filter(r => r.p.age != null && r.p.age <= 21).sort((a, b) => (b.p.pot || 0) - (a.p.pot || 0)) },
+      { t: 'Wonderkids', s: '21 or younger, up to 6 below your level, highest potential first', rows: rank({ pos: 'LINEUP', raw: true }).rows.filter(r => r.p.age != null && r.p.age <= 21 && nearLevel(r.p, 6)).sort((a, b) => (b.p.pot || 0) - (a.p.pot || 0)) },
       { t: 'Contracts running out', s: 'Cheaper now, free next summer', rows: all.filter(r => !r.p.free && r.p.contractEnd != null && r.p.contractEnd <= ctx.seasonEnd) },
     ].filter(r => r.rows.length);
     return `
@@ -340,6 +346,7 @@
       <a class="link" href="#market" data-act="tab" data-v="market">More filters</a>
       <span class="hint legend"><i class="dot"></i>${squadAvg() != null ? `Black card: better than your current player in that position, fit ${PICK_FIT}+, lore ${PICK_LORE}+.` : 'Black cards show up once you add your players or log a window with your team OVR.'}</span>
       ${own.length ? `<span class="hint">Your ${own.length} players are left out.</span>` : ''}
+      ${lvl != null ? `<span class="hint">Showing players rated ${Math.round(lvl - BAND_LO)} to ${Math.round(lvl + BAND_HI)}, around your level.</span>` : ''}
     </section>
     <section class="hero">
       <div class="hero-l">
@@ -355,7 +362,7 @@
         <div class="row gap wrap"><a class="btn primary" href="#market" data-act="tab" data-v="market">Open the market</a><a class="btn" href="#club" data-act="tab" data-v="club">Log this window</a></div>
         ${gaps.length ? `<h3 class="mini-h">Biggest upgrades on offer</h3><ul class="gaps">${gaps.map(g => `<li data-act="open" data-v="${esc(g.x.p.key)}" tabindex="0"><b>${g.s.pos}</b><span>${esc(g.x.p.name)}</span><em>+${g.d} OVR</em></li>`).join('')}</ul>` : `<p class="hint">Enter your starters on the Squad tab and the biggest upgrades show up here.</p>`}
       </div>
-      <div class="hero-r"><p class="eyebrow">Best realistic lineup · ${esc(formation().label)}</p>${pitchSVG(xi, null)}<p class="hint center">${filled} of ${slots.length} slots filled from players who would sign.</p></div>
+      <div class="hero-r"><p class="eyebrow">Best realistic lineup · ${esc(formation().label)}</p>${pitchSVG(xi, null)}<p class="hint center">${filled} of ${slots.length} slots filled from players who would sign.${lvl != null ? ` Only players rated ${Math.round(lvl - BAND_LO)} to ${Math.round(lvl + BAND_HI)}, around your team level of ${Math.round(lvl)}.` : ''}</p></div>
     </section>
     ${rails.map(r => `<section class="rail"><header><h2>${esc(r.t)}</h2><p>${esc(r.s)}</p></header><div class="rail-row">${r.rows.slice(0, 12).map(card).join('')}</div></section>`).join('')}
     ${!rails.length ? '<section class="panel"><div class="empty"><h3>No players to show yet</h3><p>Load a scan on the Data tab and this page fills with targets.</p></div></section>' : ''}`;

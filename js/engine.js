@@ -21,11 +21,11 @@ const Engine = (() => {
     release: ['releaseclause', 'release', 'relclause', 'buyoutclause'],
     foot: ['preferredfoot', 'foot', 'pf'],
     weak: ['weakfoot', 'wf'],
-    kit: ['kitnumber', 'jerseynumber', 'shirtnumber', 'squadnumber', 'kitno'],
+    kit: ['clubkitnumber', 'kitnumber', 'jerseynumber', 'shirtnumber', 'squadnumber', 'kitno'],
     skill: ['skillmoves', 'sm', 'skills'],
     height: ['height'],
     weight: ['weight'],
-    playstyles: ['playstyles', 'playstyle', 'traits', 'specialities'],
+    playstyles: ['playstyles', 'playstyle', 'specialities'],
     playstylesPlus: ['playstylesplus'],
     crossing: ['crossing', 'cro'],
     finishing: ['finishing', 'fin'],
@@ -49,7 +49,7 @@ const Engine = (() => {
     longShots: ['longshots', 'los'],
     aggression: ['aggression', 'agg'],
     interceptions: ['interceptions', 'inte', 'int'],
-    positioning: ['positioning', 'attposition', 'attackingposition', 'attpos'],
+    positioning: ['positioning', 'attposition', 'attackingposition', 'attpos', 'attackposition'],
     vision: ['vision', 'vis'],
     penalties: ['penalties', 'pen'],
     composure: ['composure', 'com'],
@@ -111,7 +111,23 @@ const Engine = (() => {
     return out;
   }
   function parseInt0(s) { const m = String(s == null ? '' : s).match(/-?\d+/); return m ? parseInt(m[0], 10) : null; }
+  const PS_VOCAB = new Set(['finesseshot', 'chipshot', 'powershot', 'deadball', 'powerheader', 'precisionheader', 'lowdrivenshot', 'acrobatic', 'gamechanger', 'incisivepass', 'pingedpass', 'longballpass', 'tikitaka', 'whippedpass', 'inventive', 'jockey', 'block', 'intercept', 'anticipate', 'slidetackle', 'bruiser', 'technical', 'rapid', 'flair', 'firsttouch', 'trickster', 'pressproven', 'quickstep', 'relentless', 'trivela', 'longthrow', 'aerialfortress', 'enforcer', 'footwork', 'crossclaimer', 'rushout', 'farthrow', 'farreach', 'deflector', 'earlycrosser', 'longshottaker', 'penaltytaker']);
+  /* SoFIFA scans glue the names together with spaces, so match the longest known name at each position. A trailing + means the upgraded version. */
+  function parsePlaystyles(cell) {
+    const s = String(cell || '').replace(/\(CPU AI\)/gi, ' ');
+    if (/[,;|]/.test(s)) return splitList(s).map(x => { const k = norm(x.replace(/\+/g, '')); return PS_VOCAB.has(k) ? k + (/\+/.test(x) ? 'plus' : '') : null; }).filter(Boolean);
+    const w = s.replace(/\+/g, ' + ').split(/\s+/).filter(Boolean); const out = [];
+    for (let i = 0; i < w.length;) {
+      let hit = null, n = 0;
+      for (let len = Math.min(4, w.length - i); len >= 1; len--) { const k = norm(w.slice(i, i + len).join('')); if (PS_VOCAB.has(k)) { hit = k; n = len; break; } }
+      if (!hit) { i++; continue; }
+      i += n; if (w[i] === '+') { out.push(hit + 'plus'); i++; } else out.push(hit);
+    }
+    return out;
+  }
   function splitList(s) { return String(s || '').split(/[,;|]/).map(x => x.trim()).filter(Boolean); }
+
+  const dedupePs = list => { const set = new Set(list); return [...set].filter(x => x.endsWith('plus') || !set.has(x + 'plus')); };
 
   function csvParse(text, delim) {
     const rows = []; let row = [], cur = '', q = false;
@@ -161,6 +177,7 @@ const Engine = (() => {
 
   function finishPlayer(p) {
     let name = p._name; let positions = parsePositions(p._positions);
+    name = String(name || '').replace(/^\d{1,2}\s+(?=\S)/, '');
     if (!positions.length) {
       const parts = name.split(/\s+/); const found = [];
       while (parts.length > 1 && POS_TOKENS.includes(parts[parts.length - 1].toUpperCase())) found.unshift(parts.pop().toUpperCase());
@@ -179,7 +196,7 @@ const Engine = (() => {
       value: money(p._value), wage: money(p._wage), release: money(p._release),
       foot: /left/i.test(p._foot || '') ? 'L' : (/right/i.test(p._foot || '') ? 'R' : ''),
       weak: p.weak ?? null, skill: p.skill ?? null,
-      playstyles: splitList(p._playstyles).map(x => norm(x) + (/\+/.test(x) ? 'plus' : '')).concat(splitList(p._playstylesPlus).map(x => norm(x).replace(/plus$/, '') + 'plus')),
+      playstyles: dedupePs(parsePlaystyles(p._playstyles).concat(parsePlaystyles(p._playstylesPlus))),
     };
     if (p.kit != null && p.kit >= 1 && p.kit <= 99) out.kit = p.kit;
     ATTR_KEYS.concat(FACE_KEYS).forEach(k => { if (p[k] != null) out[k] = p[k]; });
@@ -194,12 +211,12 @@ const Engine = (() => {
   const mirror = m => { const o = {}; Object.entries(m).forEach(([k, v]) => { o[mirrorTok(k)] = v; }); return o; };
 
   const PS_CB = ['intercept', 'anticipate', 'block', 'jockey', 'pressproven', 'pingedpass', 'longballpass', 'quickstep', 'slidetackle', 'tikitaka', 'incisivepass'];
-  const PS_FB = ['quickstep', 'rapid', 'relentless', 'whippedpass', 'jockey', 'intercept', 'slidetackle', 'pressproven', 'technical', 'crossplayer'];
+  const PS_FB = ['quickstep', 'rapid', 'relentless', 'whippedpass', 'jockey', 'intercept', 'slidetackle', 'pressproven', 'technical'];
   const PS_DM = ['intercept', 'pressproven', 'tikitaka', 'incisivepass', 'pingedpass', 'longballpass', 'quickstep', 'relentless', 'jockey', 'anticipate', 'bruiser', 'slidetackle', 'technical', 'firsttouch'];
   const PS_CM = ['tikitaka', 'incisivepass', 'pingedpass', 'relentless', 'pressproven', 'firsttouch', 'technical', 'intercept', 'longballpass'];
-  const PS_WIDE = ['rapid', 'quickstep', 'technical', 'trickster', 'firsttouch', 'whippedpass', 'incisivepass', 'finesseshot', 'relentless', 'flairpass', 'trivela'];
-  const PS_CAM = ['tikitaka', 'incisivepass', 'firsttouch', 'technical', 'flairpass', 'pressproven', 'finesseshot', 'trickster'];
-  const PS_ST = ['clinicalfinisher', 'finesseshot', 'powershot', 'chipshot', 'precisionheader', 'acrobatic', 'firsttouch', 'rapid', 'quickstep', 'aerial'];
+  const PS_WIDE = ['rapid', 'quickstep', 'technical', 'trickster', 'firsttouch', 'whippedpass', 'incisivepass', 'finesseshot', 'relentless', 'flair', 'trivela'];
+  const PS_CAM = ['tikitaka', 'incisivepass', 'firsttouch', 'technical', 'flair', 'pressproven', 'finesseshot', 'trickster', 'inventive'];
+  const PS_ST = ['finesseshot', 'lowdrivenshot', 'powershot', 'chipshot', 'precisionheader', 'powerheader', 'acrobatic', 'firsttouch', 'rapid', 'quickstep', 'aerialfortress', 'gamechanger'];
   const PS_GK = ['footwork', 'farreach', 'crossclaimer', 'rushout'];
 
   // pos maps are written for the right side; mirror() is applied for left-side slots.

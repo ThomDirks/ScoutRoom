@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const Engine = require(path.join(__dirname, '..', 'js', 'engine.js'));
 
+const SEASON = 2026; // contract years before the game's first season are leftovers in the data, so they count as unknown
 const files = process.argv.slice(2);
 if (!files.length) { console.error('Give me at least one scan file.'); process.exit(1); }
 
@@ -14,7 +15,7 @@ for (const f of files) {
   const r = Engine.parseTable(fs.readFileSync(f, 'utf8'));
   if (r.error) { console.error(f + ': ' + r.error); process.exit(1); }
   console.log(f + ': ' + r.players.length + ' players. Columns: ' + r.recognized.join(', '));
-  r.players.forEach(p => { delete p.demo; byKey.set(p.key, p); });
+  r.players.forEach(p => { delete p.demo; if (p.contractEnd && p.contractEnd < SEASON) p.contractEnd = null; byKey.set(p.key, p); });
 }
 const players = [...byKey.values()];
 const keys = [...new Set(players.flatMap(p => Object.keys(p)))];
